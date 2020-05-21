@@ -1,5 +1,6 @@
-const mysql = require('mysql2');
+const mysql = require('mysql2/promise');
 const bcrypt = require('bcryptjs');
+const validator = require('validator');
 
 const dbConfig = {
   host: process.env.DB_HOST,
@@ -14,32 +15,91 @@ exports.post = async (req, res) => {
   try {
     const user = req.body;
 
-    // TODO: validação
+    // * se não foi enviado algum parâmetro obrigatório, retorno erro 400.
+    if (user.nome === undefined || user.password === undefined || user.email === undefined) {
+      return res.status(400).send({
+        status: 'erro',
+        mensagem: 'Requisição inválida.',
+      });
+    }
+
+    // * validação
+    if (!user.nome.trim()) {
+      return res.status(400).send({
+        status: 'erro',
+        tipo: 'validação',
+        campo: 'nome',
+        motivo: 'vazio',
+        mensagem: 'O nome não foi informado.',
+      });
+    }
+
+    // * validação
+    if (!validator.isEmail(user.email)) {
+      return res.status(400).send({
+        status: 'erro',
+        tipo: 'validação',
+        campo: 'email',
+        motivo: 'inválido',
+        mensagem: 'Não foi informado um e-mail válido.',
+      });
+    }
+
+    // * validação
+    if (user.password.trim().length < 6) {
+      return res.status(400).send({
+        status: 'erro',
+        tipo: 'validação',
+        campo: 'senha',
+        motivo: 'fraca',
+        mensagem: 'A senha precisa conter ao menos 6 caracteres.',
+      });
+    }
+
+    // * verifica se o usuário já existe.
+    try {
+      const connection = await mysql.createConnection(dbConfig);
+      const [rows] = await connection.execute('SELECT * FROM user WHERE email = ?', [user.email]);
+      await connection.end();
+
+      if (rows.length === 1) {
+        return res.status(400).send({
+          status: 'erro',
+          tipo: 'validação',
+          campo: 'email',
+          motivo: 'existente',
+          mensagem: 'O usuário já existe.',
+        });
+      }
+    } catch (err) {
+      // * se ocorreu algum erro durante a consulta ao banco de dados, retorna erro 400.
+      return res.status(400).send({
+        status: 'erro',
+        mensagem: 'Ocorreu um erro ao inserir o usuário.',
+      });
+    }
 
     // * criptografando o password
     const passwd = await bcrypt.hash(user.password, 10);
     user.password = passwd;
 
-    const connection = mysql.createConnection(dbConfig);
+    try {
+      const connection2 = await mysql.createConnection(dbConfig);
+      await connection2.query('INSERT INTO user SET ?', user);
+      await connection2.end();
 
-    connection.query('INSERT INTO user SET ?', user, (err) => {
-      connection.end();
-
-      if (err) {
-        // * se ocorreu algum erro durante a inserção do usuário no banco de dados, retorna erro 400
-        return res.status(400).send({
-          status: 'erro',
-          mensagem: 'Ocorreu um erro ao inserir o usuário.',
-        });
-      }
-
+      // TODO: Falta retornar um JWT
       return res.status(200).send({
         status: 'ok',
         mensagem: 'Usuário incluído com sucesso.',
       });
-    });
-  } catch (error) {
-    // * se ocorreu algum erro durante o processo de inserção de usuário, retorna erro 400.
+    } catch (err) {
+      return res.status(400).send({
+        status: 'erro',
+        mensagem: 'Ocorreu um erro ao inserir o usuário.',
+      });
+    }
+  } catch (err) {
     return res.status(400).send({
       status: 'erro',
       mensagem: 'Ocorreu um erro ao inserir o usuário.',
@@ -52,49 +112,64 @@ exports.get = async (req, res) => {
   try {
     const user = req.body;
 
-    // TODO validação
+    // * se não foi enviado algum parâmetro obrigatório, retorno erro 400.
+    if (user.password === undefined || user.email === undefined) {
+      return res.status(400).send({
+        status: 'erro',
+        mensagem: 'Requisição inválida.',
+      });
+    }
 
-    const connection = mysql.createConnection(dbConfig);
+    // * validação
+    if (!validator.isEmail(user.email)) {
+      return res.status(400).send({
+        status: 'erro',
+        mensagem: 'E-mail não localizado.',
+      });
+    }
 
-    connection.query(
-      'SELECT * FROM user WHERE email = ?',
-      user.email,
-      async (err, results) => {
-        connection.end();
+    // * validação
+    if (user.password.trim().length < 6) {
+      return res.status(400).send({
+        status: 'erro',
+        mensagem: 'Password inválido.',
+      });
+    }
 
-        if (err) {
-          // * se ocorreu algum erro durante a consulta ao banco de dados, retorna erro 400.
+    try {
+      const connection = await mysql.createConnection(dbConfig);
+      const [rows] = await connection.query('SELECT * FROM user WHERE email = ?', user.email);
+      await connection.end();
+
+      // * se existe algum resultado, o usuário existe
+      if (rows.length === 1) {
+        // * comparando a senha, para ver se a senha está correta para esse usuário.
+        if (!(await bcrypt.compare(user.password, rows[0].password))) {
           return res.status(400).send({
             status: 'erro',
-            mensagem: 'Ocorreu um erro ao realizar o login.',
+            mensagem: 'Password inválido.',
           });
         }
 
-        // * se existe algum resultado, o usuário existe
-        if (results.length === 1) {
-          // * comparando a senha, para ver se a senha está correta para esse usuário.
-          if (!(await bcrypt.compare(user.password, results[0].password))) {
-            return res.status(400).send({
-              status: 'erro',
-              mensagem: 'Password inválido.',
-            });
-          }
-
-          return res.status(200).send({
-            status: 'ok',
-            mensagem: 'Login realizado com sucesso.',
-          });
-        }
-
-        // * se a consulta não retornou nada, o e-mail está inválido.
-        return res.status(400).send({
-          status: 'erro',
-          mensagem: 'E-mail não localizado.',
+        // TODO: Falta retornar um JWT
+        return res.status(200).send({
+          status: 'ok',
+          mensagem: 'Login realizado com sucesso.',
         });
       }
-    );
-  } catch (error) {
-    // * se ocorreu algum erro durante o processo de login, retorna erro 400.
+
+      // * se a consulta não retornou nada, o e-mail está inválido.
+      return res.status(400).send({
+        status: 'erro',
+        mensagem: 'E-mail não localizado.',
+      });
+    } catch (err) {
+      return res.status(400).send({
+        status: 'erro',
+        mensagem: 'Ocorreu um erro ao realizar o login.',
+      });
+    }
+  } catch (err) {
     return res.status(400).send({
       status: 'erro',
       mensagem: 'Ocorreu um erro ao realizar o login.',
