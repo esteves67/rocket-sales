@@ -1,6 +1,8 @@
 const mysql = require('mysql2/promise');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const validator = require('validator');
+const jwt = require('jsonwebtoken');
 
 const dbConfig = {
   host: process.env.DB_HOST,
@@ -88,10 +90,18 @@ exports.post = async (req, res) => {
       await connection2.query('INSERT INTO user SET ?', user);
       await connection2.end();
 
-      // TODO: Falta retornar um JWT
+      const connection3 = await mysql.createConnection(dbConfig);
+      const [rows] = await connection3.query('SELECT id FROM user WHERE email = ?', user.email);
+      await connection3.end();
+
+      const token = jwt.sign({ user: rows[0].id }, process.env.SECRET, {
+        expiresIn: 86400, // 24 horas
+      });
+
       return res.status(200).send({
         status: 'ok',
         mensagem: 'Usuário incluído com sucesso.',
+        token,
       });
     } catch (err) {
       return res.status(400).send({
@@ -107,8 +117,38 @@ exports.post = async (req, res) => {
   }
 };
 
+// exports.forgot = async (req, res) => {
+//   try {
+//     const user = req.body;
+
+//     //sahatyalkabov.com/how-to-implement-password-reset-in-nodejs/
+
+//     http: const buf = await crypto.randomBytes(20);
+//     const token = buf.toString('hex');
+
+//     const connection = await mysql.createConnection(dbConfig);
+//     await connection.query(
+//       `UPDATE user SET resetPasswordToken = '123123' WHERE email = '1claudio@rocket-sales.com.br'`
+//     );
+//     await connection.end();
+
+//     console.log(token);
+
+//     return res.status(400).send({
+//       status: 'ok',
+//       mensagem: 'ok.',
+//     });
+//   } catch (error) {
+//     console.log(error);
+//     return res.status(400).send({
+//       status: 'erro',
+//       mensagem: 'Erro ao resetar o password.',
+//     });
+//   }
+// };
+
 // eslint-disable-next-line consistent-return
-exports.get = async (req, res) => {
+exports.login = async (req, res) => {
   try {
     const user = req.body;
 
