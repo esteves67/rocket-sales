@@ -1,3 +1,4 @@
+
 # rocket-sales
 
 API do sistema rocket-sales. Sistema com o objetivo de administrar o fluxo de clientes no show-room de concessionárias de veículos.
@@ -6,9 +7,9 @@ Desenvolvida em NODEJS, Express e banco de dados MySQL.
 
 ## Dependências
 
-Node 12.17.0
-NPM
-MySql 8.0
+* Node 12.17.0 
+* NPM
+* MySql 8.0
 
 ## Configurações para executar o projeto
 
@@ -18,15 +19,10 @@ MySql 8.0
 
 ## Tecnologias
 
-Node https://nodejs.org/en/
-Express https://expressjs.com/pt-br/
-MySQL https://www.mysql.com/products/community/
+* Node https://nodejs.org/en/
+* Express https://expressjs.com/pt-br/
+* MySQL https://www.mysql.com/products/community/
 
 ## Desenvolvimento
 
 Sugestão de desenvolvimento: Usar o VSCode com as extensões ESLint e Prettier para manter a padronização do código. 
-
-
-
-
-
