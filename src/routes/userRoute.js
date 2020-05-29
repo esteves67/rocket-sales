@@ -17,10 +17,10 @@ function auth(req, res, next) {
   });
 }
 
-router.get('/login', controller.login);
-router.get('/forgot', controller.forgot);
-router.post('/', controller.post);
-// * router.put("/:id", controller.put);
-// * router.delete("/:id", controller.delete);
+router.post('/signup', controller.signup); // * cadastrar usuário
+router.get('/auth', controller.auth); // * autenticar usuário
+router.get('/passwordReset', controller.sendMailPasswordReset); // * iniciar processo de resetar a senha
+router.get('/passwordReset/:token', controller.checkTokenPasswordReset); // * link que o usuário recebe por e-mail para resetar a senha
+router.post('/passwordReset', controller.passwordReset); // * resetar a senha
 
 module.exports = router;

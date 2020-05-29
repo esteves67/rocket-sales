@@ -31,6 +31,8 @@ CREATE TABLE `user` (
   `password` varchar(100) NOT NULL,
   `createdAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updatedAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `ResetPasswordToken` varchar(100) NOT NULL,
+  `ResetPasswordExpires` datetime NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `email_UNIQUE` (`email`)
 ) ENGINE=InnoDB AUTO_INCREMENT=65 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='			';
@@ -42,7 +44,6 @@ CREATE TABLE `user` (
 
 LOCK TABLES `user` WRITE;
 /*!40000 ALTER TABLE `user` DISABLE KEYS */;
-INSERT INTO `user` VALUES (20,'claudioscarpafilho@outlook.com','Claudio Scarpa Filho','$2a$10$UTh6wc6yzLphJsi4Z5EdGOWfNvP4JsYkE92N/rXxX8OnjyCG9BKe6','2020-05-21 14:36:36','2020-05-21 14:36:36'),(64,'claudioscarpafilho1@outlook.com','Claudio Scarpa Filho','$2a$10$eBIbX4/NKADwh6CGR3ysGe6Uq6SgYLmWd/vqhWq9XTHZ6tQOPdr1.','2020-05-21 17:51:31','2020-05-21 17:51:31');
 /*!40000 ALTER TABLE `user` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
