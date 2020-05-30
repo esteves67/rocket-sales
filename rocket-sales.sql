@@ -18,6 +18,92 @@ USE `rocket-sales`;
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
+-- Table structure for table `dealer`
+--
+
+DROP TABLE IF EXISTS `dealer`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `dealer` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `nome` varchar(45) NOT NULL,
+  `fabricante` varchar(45) NOT NULL,
+  `plano` int NOT NULL,
+  `contaFaturamento` int DEFAULT NULL,
+  `createdAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `dealer`
+--
+
+LOCK TABLES `dealer` WRITE;
+/*!40000 ALTER TABLE `dealer` DISABLE KEYS */;
+INSERT INTO `dealer` VALUES (1,'Honda Rocket Líbero Badaró','Honda',1,NULL,'2020-05-30 11:31:30','2020-05-30 11:31:30');
+/*!40000 ALTER TABLE `dealer` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `faturamento`
+--
+
+DROP TABLE IF EXISTS `faturamento`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `faturamento` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `user` int NOT NULL,
+  `cnpj` varchar(18) NOT NULL,
+  `inscricaoEstadual` varchar(45) NOT NULL,
+  `razaoSocial` varchar(100) NOT NULL,
+  `endereco` varchar(100) NOT NULL,
+  `cidade` varchar(100) NOT NULL,
+  `estado` varchar(2) NOT NULL,
+  `cep` varchar(9) NOT NULL,
+  `createdAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `faturamento`
+--
+
+LOCK TABLES `faturamento` WRITE;
+/*!40000 ALTER TABLE `faturamento` DISABLE KEYS */;
+INSERT INTO `faturamento` VALUES (1,73,'00.000.000/0000-00','Isento','Honda Rocket','Rua Líbero Badaro, 5000','São Paulo','SP','01008-000','2020-05-30 11:30:46','2020-05-30 11:30:46');
+/*!40000 ALTER TABLE `faturamento` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `planos`
+--
+
+DROP TABLE IF EXISTS `planos`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `planos` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `nome` varchar(45) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `planos`
+--
+
+LOCK TABLES `planos` WRITE;
+/*!40000 ALTER TABLE `planos` DISABLE KEYS */;
+INSERT INTO `planos` VALUES (1,'Grátis'),(2,'Completo');
+/*!40000 ALTER TABLE `planos` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `user`
 --
 
@@ -31,11 +117,11 @@ CREATE TABLE `user` (
   `password` varchar(100) NOT NULL,
   `createdAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updatedAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `ResetPasswordToken` varchar(100) NOT NULL,
-  `ResetPasswordExpires` datetime NOT NULL,
+  `resetPasswordToken` varchar(100) DEFAULT NULL,
+  `resetPasswordExpires` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `email_UNIQUE` (`email`)
-) ENGINE=InnoDB AUTO_INCREMENT=65 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='			';
+) ENGINE=InnoDB AUTO_INCREMENT=74 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='			';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -44,8 +130,17 @@ CREATE TABLE `user` (
 
 LOCK TABLES `user` WRITE;
 /*!40000 ALTER TABLE `user` DISABLE KEYS */;
+INSERT INTO `user` VALUES (73,'dev@rocket-sales.com.br','Dev User','$2a$10$xksWE1Umd63T/nDG1GlyvOKh80v2YygF0cPpDEFIR6UuOVbS7QIL.','2020-05-30 11:24:33','2020-05-30 11:24:33','e25a5b9a00437e1b540f4509b0b0b702a0084db9','2020-05-30 13:27:24');
 /*!40000 ALTER TABLE `user` ENABLE KEYS */;
 UNLOCK TABLES;
+
+--
+-- Dumping events for database 'rocket-sales'
+--
+
+--
+-- Dumping routines for database 'rocket-sales'
+--
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -56,4 +151,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2020-05-21 17:57:24
+-- Dump completed on 2020-05-30 11:32:38
