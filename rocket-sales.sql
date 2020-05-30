@@ -32,7 +32,11 @@ CREATE TABLE `dealer` (
   `contaFaturamento` int DEFAULT NULL,
   `createdAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updatedAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `fk_dealer_1_idx` (`plano`),
+  KEY `fk_dealer_2_idx` (`contaFaturamento`),
+  CONSTRAINT `fk_dealer_faturamento` FOREIGN KEY (`contaFaturamento`) REFERENCES `faturamento` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
+  CONSTRAINT `fk_dealer_planos` FOREIGN KEY (`plano`) REFERENCES `planos` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -44,6 +48,38 @@ LOCK TABLES `dealer` WRITE;
 /*!40000 ALTER TABLE `dealer` DISABLE KEYS */;
 INSERT INTO `dealer` VALUES (1,'Honda Rocket Líbero Badaró','Honda',1,NULL,'2020-05-30 11:31:30','2020-05-30 11:31:30');
 /*!40000 ALTER TABLE `dealer` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `dealerUsers`
+--
+
+DROP TABLE IF EXISTS `dealerUsers`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `dealerUsers` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `dealer` int NOT NULL,
+  `user` int NOT NULL,
+  `permissao` int NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `fk_dealerUsers_1_idx` (`dealer`),
+  KEY `fk_dealerUsers_2_idx` (`user`),
+  KEY `fk_dealerUsers_3_idx` (`permissao`),
+  CONSTRAINT `fk_dealerUsers_dealer` FOREIGN KEY (`dealer`) REFERENCES `dealer` (`id`),
+  CONSTRAINT `fk_dealerUsers_permissao` FOREIGN KEY (`permissao`) REFERENCES `permissoes` (`id`),
+  CONSTRAINT `fk_dealerUsers_user` FOREIGN KEY (`user`) REFERENCES `user` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `dealerUsers`
+--
+
+LOCK TABLES `dealerUsers` WRITE;
+/*!40000 ALTER TABLE `dealerUsers` DISABLE KEYS */;
+INSERT INTO `dealerUsers` VALUES (1,1,73,4);
+/*!40000 ALTER TABLE `dealerUsers` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -65,7 +101,9 @@ CREATE TABLE `faturamento` (
   `cep` varchar(9) NOT NULL,
   `createdAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updatedAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `fk_faturamento_1_idx` (`user`),
+  CONSTRAINT `fk_faturamento_1` FOREIGN KEY (`user`) REFERENCES `user` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -77,6 +115,30 @@ LOCK TABLES `faturamento` WRITE;
 /*!40000 ALTER TABLE `faturamento` DISABLE KEYS */;
 INSERT INTO `faturamento` VALUES (1,73,'00.000.000/0000-00','Isento','Honda Rocket','Rua Líbero Badaro, 5000','São Paulo','SP','01008-000','2020-05-30 11:30:46','2020-05-30 11:30:46');
 /*!40000 ALTER TABLE `faturamento` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `permissoes`
+--
+
+DROP TABLE IF EXISTS `permissoes`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `permissoes` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `nome` varchar(45) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `permissoes`
+--
+
+LOCK TABLES `permissoes` WRITE;
+/*!40000 ALTER TABLE `permissoes` DISABLE KEYS */;
+INSERT INTO `permissoes` VALUES (1,'Recepcionista'),(2,'Vendedor'),(3,'Gerente'),(4,'Administrador');
+/*!40000 ALTER TABLE `permissoes` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -151,4 +213,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2020-05-30 11:32:38
+-- Dump completed on 2020-05-30 11:56:10
