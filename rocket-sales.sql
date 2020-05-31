@@ -2,9 +2,9 @@ CREATE DATABASE  IF NOT EXISTS `rocket-sales` /*!40100 DEFAULT CHARACTER SET utf
 USE `rocket-sales`;
 -- MySQL dump 10.13  Distrib 8.0.20, for Linux (x86_64)
 --
--- Host: localhost    Database: rocket-sales
+-- Host: 127.0.0.1    Database: rocket-sales
 -- ------------------------------------------------------
--- Server version	8.0.20
+-- Server version	8.0.20-0ubuntu0.20.04.1
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -37,7 +37,7 @@ CREATE TABLE `dealer` (
   KEY `fk_dealer_2_idx` (`contaFaturamento`),
   CONSTRAINT `fk_dealer_faturamento` FOREIGN KEY (`contaFaturamento`) REFERENCES `faturamento` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `fk_dealer_planos` FOREIGN KEY (`plano`) REFERENCES `planos` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -62,6 +62,7 @@ CREATE TABLE `dealerUsers` (
   `dealer` int NOT NULL,
   `user` int NOT NULL,
   `permissao` int NOT NULL,
+  `principal` bit(1) NOT NULL DEFAULT b'0',
   PRIMARY KEY (`id`),
   KEY `fk_dealerUsers_1_idx` (`dealer`),
   KEY `fk_dealerUsers_2_idx` (`user`),
@@ -69,7 +70,7 @@ CREATE TABLE `dealerUsers` (
   CONSTRAINT `fk_dealerUsers_dealer` FOREIGN KEY (`dealer`) REFERENCES `dealer` (`id`),
   CONSTRAINT `fk_dealerUsers_permissao` FOREIGN KEY (`permissao`) REFERENCES `permissoes` (`id`),
   CONSTRAINT `fk_dealerUsers_user` FOREIGN KEY (`user`) REFERENCES `user` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -78,7 +79,7 @@ CREATE TABLE `dealerUsers` (
 
 LOCK TABLES `dealerUsers` WRITE;
 /*!40000 ALTER TABLE `dealerUsers` DISABLE KEYS */;
-INSERT INTO `dealerUsers` VALUES (1,1,73,4);
+INSERT INTO `dealerUsers` VALUES (1,1,73,4,_binary '\0');
 /*!40000 ALTER TABLE `dealerUsers` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -104,7 +105,7 @@ CREATE TABLE `faturamento` (
   PRIMARY KEY (`id`),
   KEY `fk_faturamento_1_idx` (`user`),
   CONSTRAINT `fk_faturamento_1` FOREIGN KEY (`user`) REFERENCES `user` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -183,7 +184,7 @@ CREATE TABLE `user` (
   `resetPasswordExpires` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `email_UNIQUE` (`email`)
-) ENGINE=InnoDB AUTO_INCREMENT=74 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='			';
+) ENGINE=InnoDB AUTO_INCREMENT=75 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='			';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -213,4 +214,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2020-05-30 11:56:10
+-- Dump completed on 2020-05-31 17:39:03

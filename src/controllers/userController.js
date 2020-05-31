@@ -178,8 +178,16 @@ exports.auth = async (req, res) => {
           expiresIn: 86400, // 24 horas
         });
 
+        const connection2 = await mysql.createConnection(dbConfig);
+        const [rows2] = await connection2.query(
+          'SELECT dealer FROM dealerUsers WHERE user = ? ORDER BY principal DESC',
+          rows[0].id
+        );
+        await connection2.end();
+
         return res.status(200).send({
           status: 'ok',
+          empresa: rows2.length > 0 ? rows2[0].dealer : 0,
           mensagem: 'Login realizado com sucesso.',
           token,
         });
