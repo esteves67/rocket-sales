@@ -51,6 +51,40 @@ INSERT INTO `dealer` VALUES (1,'Honda Rocket Líbero Badaró','Honda',1,NULL,'20
 UNLOCK TABLES;
 
 --
+-- Table structure for table `dealerConvites`
+--
+
+DROP TABLE IF EXISTS `dealerConvites`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `dealerConvites` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `dealer` int NOT NULL,
+  `admin` int NOT NULL,
+  `email` varchar(45) NOT NULL,
+  `permissao` int NOT NULL,
+  `createdAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `aceitoEm` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `fk_dealerConvites_1_idx` (`dealer`),
+  KEY `fk_dealerConvites_2_idx` (`admin`),
+  KEY `fk_dealerConvites_3_idx` (`permissao`),
+  CONSTRAINT `fk_dealerConvites_1` FOREIGN KEY (`dealer`) REFERENCES `dealer` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
+  CONSTRAINT `fk_dealerConvites_2` FOREIGN KEY (`admin`) REFERENCES `user` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
+  CONSTRAINT `fk_dealerConvites_3` FOREIGN KEY (`permissao`) REFERENCES `permissoes` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `dealerConvites`
+--
+
+LOCK TABLES `dealerConvites` WRITE;
+/*!40000 ALTER TABLE `dealerConvites` DISABLE KEYS */;
+/*!40000 ALTER TABLE `dealerConvites` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `dealerUsers`
 --
 
@@ -70,7 +104,7 @@ CREATE TABLE `dealerUsers` (
   CONSTRAINT `fk_dealerUsers_dealer` FOREIGN KEY (`dealer`) REFERENCES `dealer` (`id`),
   CONSTRAINT `fk_dealerUsers_permissao` FOREIGN KEY (`permissao`) REFERENCES `permissoes` (`id`),
   CONSTRAINT `fk_dealerUsers_user` FOREIGN KEY (`user`) REFERENCES `user` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -184,7 +218,7 @@ CREATE TABLE `user` (
   `resetPasswordExpires` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `email_UNIQUE` (`email`)
-) ENGINE=InnoDB AUTO_INCREMENT=75 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='			';
+) ENGINE=InnoDB AUTO_INCREMENT=76 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='			';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -214,4 +248,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2020-05-31 17:39:03
+-- Dump completed on 2020-05-31 18:23:39
