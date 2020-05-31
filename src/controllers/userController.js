@@ -106,7 +106,7 @@ exports.signup = async (req, res) => {
       const [rows] = await connection3.query('SELECT id FROM user WHERE email = ?', user.email);
       await connection3.end();
 
-      const token = jwt.sign({ user: rows[0].id }, process.env.SECRET, {
+      const token = jwt.sign({ user: rows[0].id, email: rows[0].email }, process.env.SECRET, {
         expiresIn: 86400, // 24 horas
       });
 
@@ -174,7 +174,7 @@ exports.auth = async (req, res) => {
           });
         }
 
-        const token = jwt.sign({ user: rows[0].id }, process.env.SECRET, {
+        const token = jwt.sign({ user: rows[0].id, email: rows[0].email }, process.env.SECRET, {
           expiresIn: 86400, // 24 horas
         });
 
@@ -208,6 +208,81 @@ exports.auth = async (req, res) => {
     return res.status(400).send({
       status: 'erro',
       mensagem: 'Ocorreu um erro ao realizar o login.',
+    });
+  }
+};
+
+exports.convite = async (req, res) => {
+  try {
+    try {
+      const connection = await mysql.createConnection(dbConfig);
+      const [rows] = await connection.query(
+        'SELECT * FROM dealerConvites WHERE email = ?',
+        req.userEmail
+      );
+      await connection.end();
+
+      return res.status(200).send({
+        status: 'ok',
+        qtde_convites: rows.length,
+        convites: rows,
+      });
+    } catch (err) {
+      return res.status(400).send({
+        status: 'erro',
+        mensagem: 'Ocorreu um erro ao obter os convites.',
+      });
+    }
+  } catch (err) {
+    return res.status(400).send({
+      status: 'erro',
+      mensagem: 'Ocorreu um erro ao obter os convites.',
+    });
+  }
+};
+
+exports.aceitarConvite = async (req, res) => {
+  try {
+    const convite = req.body;
+
+    try {
+      const connection = await mysql.createConnection(dbConfig);
+      const [rows] = await connection.query(
+        'SELECT * FROM dealerConvites WHERE id = ?',
+        convite.convite
+      );
+      await connection.end();
+
+      const connection3 = await mysql.createConnection(dbConfig);
+      await connection3.query(
+        'UPDATE dealerConvites set aceitoEm = CURRENT_TIMESTAMP WHERE id = ?',
+        convite.convite
+      );
+      await connection3.end();
+
+      const connection2 = await mysql.createConnection(dbConfig);
+      await connection2.query(
+        'INSERT INTO dealerUsers (dealer, user, permissao) VALUES (?, ?, ?)',
+        [rows[0].dealer, req.userId, rows[0].permissao]
+      );
+      await connection2.end();
+
+      return res.status(200).send({
+        status: 'ok',
+        mensagem: 'Convite aceito com sucesso.',
+      });
+    } catch (err) {
+      console.log(err);
+      return res.status(400).send({
+        status: 'erro',
+        mensagem: 'Ocorreu um erro ao aceitar o convite.',
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    return res.status(400).send({
+      status: 'erro',
+      mensagem: 'Ocorreu um erro ao aceitar o convite.',
     });
   }
 };

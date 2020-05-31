@@ -12,6 +12,7 @@ function auth(req, res, next) {
     if (err) return res.status(401).send({ auth: false, message: 'Token inválido.' });
 
     req.userId = decoded.user;
+    req.userEmail = decoded.email;
     next();
   });
 }

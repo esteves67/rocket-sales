@@ -13,6 +13,7 @@ function auth(req, res, next) {
     if (err) return res.status(401).send({ auth: false, message: 'Token inválido.' });
 
     req.userId = decoded.user;
+    req.userEmail = decoded.email;
     next();
   });
 }
@@ -22,5 +23,7 @@ router.get('/auth', controller.auth); // * autenticar usuário
 router.get('/passwordReset', controller.sendMailPasswordReset); // * iniciar processo de resetar a senha
 router.get('/passwordReset/:token', controller.checkTokenPasswordReset); // * link que o usuário recebe por e-mail para resetar a senha
 router.post('/passwordReset', controller.passwordReset); // * resetar a senha
+router.get('/convite', auth, controller.convite);
+router.post('/aceitarConvite', auth, controller.aceitarConvite);
 
 module.exports = router;

@@ -1,4 +1,5 @@
 const mysql = require('mysql2/promise');
+const validator = require('validator');
 
 const dbConfig = {
   host: process.env.DB_HOST,
@@ -138,6 +139,58 @@ exports.principal = async (req, res) => {
     return res.status(400).send({
       status: 'erro',
       mensagem: 'Ocorreu um erro ao inserir o dealer.',
+    });
+  }
+};
+
+exports.convidar = async (req, res) => {
+  try {
+    const convite = req.body;
+
+    // * se não foi enviado algum parâmetro obrigatório, retorno erro 400.
+    if (
+      convite.email === undefined ||
+      convite.permissao === undefined ||
+      convite.dealer === undefined
+    ) {
+      return res.status(400).send({
+        status: 'erro',
+        mensagem: 'Requisição inválida.',
+      });
+    }
+
+    // * validação
+    if (!validator.isEmail(convite.email)) {
+      return res.status(400).send({
+        status: 'erro',
+        mensagem: 'E-mail inválido.',
+      });
+    }
+
+    try {
+      const connection3 = await mysql.createConnection(dbConfig);
+      await connection3.query(
+        'INSERT INTO dealerConvites (dealer, admin, email, permissao) VALUES (?, ?, ?, ?)',
+        [convite.dealer, req.userId, convite.email, convite.permissao]
+      );
+      await connection3.end();
+
+      return res.status(200).send({
+        status: 'ok',
+        mensagem: 'Usuário convidado com sucesso.',
+      });
+    } catch (err) {
+      console.log(err);
+      return res.status(400).send({
+        status: 'erro',
+        mensagem: 'Ocorreu um erro ao convidar o usuário.',
+      });
+    }
+  } catch (err) {
+    console.log(err);
+    return res.status(400).send({
+      status: 'erro',
+      mensagem: 'Ocorreu um erro ao convidar o usuário.',
     });
   }
 };
