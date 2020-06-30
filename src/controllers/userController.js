@@ -5,6 +5,7 @@ const validator = require('validator');
 const jwt = require('jsonwebtoken');
 const moment = require('moment');
 const transporter = require('../util/nodemailer');
+const tratamentoErros = require('../util/tratamentoErros');
 
 const dbConfig = {
   host: process.env.DB_HOST,
@@ -13,11 +14,10 @@ const dbConfig = {
   database: process.env.DB_NAME,
 };
 
-exports.signup = async (req, res) => {
+exports.cadastro = async (req, res) => {
   try {
     const user = req.body;
 
-    // * se não foi enviado algum parâmetro obrigatório, retorno erro 400.
     if (
       user.nome === undefined ||
       user.password === undefined ||
@@ -26,33 +26,27 @@ exports.signup = async (req, res) => {
     ) {
       return res.status(400).send({
         status: 'erro',
+        tipo: 'Falha na Chamada',
         mensagem: 'Requisição inválida.',
       });
     }
 
-    // * validação
     if (!user.nome.trim()) {
       return res.status(400).send({
         status: 'erro',
-        tipo: 'validação',
-        campo: 'nome',
-        motivo: 'vazio',
+        tipo: 'Validação',
         mensagem: 'O nome não foi informado.',
       });
     }
 
-    // * validação
     if (!validator.isEmail(user.email)) {
       return res.status(400).send({
         status: 'erro',
-        tipo: 'validação',
-        campo: 'email',
-        motivo: 'inválido',
+        tipo: 'Validação',
         mensagem: 'Não foi informado um e-mail válido.',
       });
     }
 
-    // * validação
     user.celular = user.celular
       .toString()
       .replace('(', '')
@@ -62,20 +56,15 @@ exports.signup = async (req, res) => {
     if (user.celular.substring(2, 3) !== '9' || user.celular.length !== 11) {
       return res.status(400).send({
         status: 'erro',
-        tipo: 'validação',
-        campo: 'celular',
-        motivo: 'inválido',
+        tipo: 'Validação',
         mensagem: 'Não foi informado um celular válido.',
       });
     }
 
-    // * validação
     if (user.password.trim().length < 6) {
       return res.status(400).send({
         status: 'erro',
-        tipo: 'validação',
-        campo: 'senha',
-        motivo: 'fraca',
+        tipo: 'Validação',
         mensagem: 'A senha precisa conter ao menos 6 caracteres.',
       });
     }
@@ -89,16 +78,15 @@ exports.signup = async (req, res) => {
       if (rows.length === 1) {
         return res.status(400).send({
           status: 'erro',
-          tipo: 'validação',
-          campo: 'email',
-          motivo: 'existente',
+          tipo: 'Validação',
           mensagem: 'O usuário já existe.',
         });
       }
     } catch (err) {
-      // * se ocorreu algum erro durante a consulta ao banco de dados, retorna erro 400.
+      tratamentoErros(req, res, err);
       return res.status(400).send({
         status: 'erro',
+        tipo: 'Erro de Servidor',
         mensagem: 'Ocorreu um erro ao inserir o usuário.',
       });
     }
@@ -107,6 +95,7 @@ exports.signup = async (req, res) => {
     const passwd = await bcrypt.hash(user.password, 10);
     user.password = passwd;
 
+    // * inserindo o usuário
     try {
       const connection2 = await mysql.createConnection(dbConfig);
       await connection2.query('INSERT INTO user SET ?', user);
@@ -128,43 +117,47 @@ exports.signup = async (req, res) => {
         token,
       });
     } catch (err) {
+      tratamentoErros(req, res, err);
       return res.status(400).send({
         status: 'erro',
+        tipo: 'Erro de Servidor',
         mensagem: 'Ocorreu um erro ao inserir o usuário.',
       });
     }
   } catch (err) {
+    tratamentoErros(req, res, err);
     return res.status(400).send({
       status: 'erro',
+      tipo: 'Erro de Servidor',
       mensagem: 'Ocorreu um erro ao inserir o usuário.',
     });
   }
 };
 
-exports.auth = async (req, res) => {
+exports.autenticacao = async (req, res) => {
   try {
     const user = req.body;
 
-    // * se não foi enviado algum parâmetro obrigatório, retorno erro 400.
     if (user.password === undefined || user.email === undefined) {
       return res.status(400).send({
         status: 'erro',
+        tipo: 'Falha na Chamada',
         mensagem: 'Requisição inválida.',
       });
     }
 
-    // * validação
     if (!validator.isEmail(user.email)) {
       return res.status(400).send({
         status: 'erro',
+        tipo: 'Falha na Autenticação',
         mensagem: 'E-mail não localizado.',
       });
     }
 
-    // * validação
     if (user.password.trim().length < 6) {
       return res.status(400).send({
         status: 'erro',
+        tipo: 'Falha na Autenticação',
         mensagem: 'Password inválido.',
       });
     }
@@ -180,6 +173,7 @@ exports.auth = async (req, res) => {
         if (!(await bcrypt.compare(user.password, rows[0].password))) {
           return res.status(400).send({
             status: 'erro',
+            tipo: 'Falha na Autenticação',
             mensagem: 'Password inválido.',
           });
         }
@@ -190,15 +184,17 @@ exports.auth = async (req, res) => {
 
         const connection2 = await mysql.createConnection(dbConfig);
         const [rows2] = await connection2.query(
-          'SELECT dealer FROM dealerUsers WHERE user = ? ORDER BY principal DESC',
+          'SELECT dealer, permissao FROM dealerUsers WHERE user = ? ORDER BY principal DESC',
           rows[0].id
         );
         await connection2.end();
 
         return res.status(200).send({
           status: 'ok',
-          empresa: rows2.length > 0 ? rows2[0].dealer : 0,
           mensagem: 'Login realizado com sucesso.',
+          nome: rows[0].nome,
+          empresa: rows2.length > 0 ? rows2[0].dealer : null,
+          permissao: rows2.length > 0 ? rows2[0].permissao : null,
           token,
         });
       }
@@ -206,46 +202,46 @@ exports.auth = async (req, res) => {
       // * se a consulta não retornou nada, o e-mail está inválido.
       return res.status(400).send({
         status: 'erro',
+        tipo: 'Falha na Autenticação',
         mensagem: 'E-mail não localizado.',
       });
     } catch (err) {
+      tratamentoErros(req, res, err);
       return res.status(400).send({
         status: 'erro',
+        tipo: 'Erro de Servidor',
         mensagem: 'Ocorreu um erro ao realizar o login.',
       });
     }
   } catch (err) {
+    tratamentoErros(req, res, err);
     return res.status(400).send({
       status: 'erro',
+      tipo: 'Erro de Servidor',
       mensagem: 'Ocorreu um erro ao realizar o login.',
     });
   }
 };
 
-exports.convite = async (req, res) => {
+exports.listarConvites = async (req, res) => {
   try {
-    try {
-      const connection = await mysql.createConnection(dbConfig);
-      const [rows] = await connection.query(
-        'SELECT * FROM dealerConvites WHERE email = ?',
-        req.userEmail
-      );
-      await connection.end();
+    const connection = await mysql.createConnection(dbConfig);
+    const [rows] = await connection.query(
+      'SELECT dealerconvites.id, dealer.nome as empresa, convidante.nome as convidante, dealerconvites.createdAt as data_convite FROM dealerconvites INNER JOIN dealer ON dealerconvites.dealer = dealer.id INNER JOIN user as convidante ON dealerconvites.convidante = convidante.id WHERE (dealerconvites.email = ?) and (dealerconvites.aceitoEm is null)',
+      req.userEmail
+    );
+    await connection.end();
 
-      return res.status(200).send({
-        status: 'ok',
-        qtde_convites: rows.length,
-        convites: rows,
-      });
-    } catch (err) {
-      return res.status(400).send({
-        status: 'erro',
-        mensagem: 'Ocorreu um erro ao obter os convites.',
-      });
-    }
+    return res.status(200).send({
+      status: 'ok',
+      qtde_convites: rows.length,
+      convites: rows,
+    });
   } catch (err) {
+    tratamentoErros(req, res, err);
     return res.status(400).send({
       status: 'erro',
+      tipo: 'Erro de Servidor',
       mensagem: 'Ocorreu um erro ao obter os convites.',
     });
   }
@@ -255,20 +251,37 @@ exports.aceitarConvite = async (req, res) => {
   try {
     const convite = req.body;
 
+    if (convite.convite === undefined) {
+      return res.status(400).send({
+        status: 'erro',
+        tipo: 'Falha na Chamada',
+        mensagem: 'Requisição inválida.',
+      });
+    }
+
     try {
       const connection = await mysql.createConnection(dbConfig);
       const [rows] = await connection.query(
-        'SELECT * FROM dealerConvites WHERE id = ?',
-        convite.convite
+        'SELECT * FROM dealerConvites WHERE (id = ?) and (email = ?)',
+        convite.convite,
+        req.userEmail
       );
       await connection.end();
 
-      const connection3 = await mysql.createConnection(dbConfig);
-      await connection3.query(
+      if (rows.length !== 1) {
+        return res.status(400).send({
+          status: 'erro',
+          tipo: 'Validação',
+          mensagem: 'Esse convite não está disponível.',
+        });
+      }
+
+      const connection1 = await mysql.createConnection(dbConfig);
+      await connection1.query(
         'UPDATE dealerConvites set aceitoEm = CURRENT_TIMESTAMP WHERE id = ?',
         convite.convite
       );
-      await connection3.end();
+      await connection1.end();
 
       const connection2 = await mysql.createConnection(dbConfig);
       await connection2.query(
@@ -282,37 +295,39 @@ exports.aceitarConvite = async (req, res) => {
         mensagem: 'Convite aceito com sucesso.',
       });
     } catch (err) {
-      console.log(err);
+      tratamentoErros(req, res, err);
       return res.status(400).send({
         status: 'erro',
+        tipo: 'Erro de Servidor',
         mensagem: 'Ocorreu um erro ao aceitar o convite.',
       });
     }
   } catch (err) {
-    console.log(err);
+    tratamentoErros(req, res, err);
     return res.status(400).send({
       status: 'erro',
+      tipo: 'Erro de Servidor',
       mensagem: 'Ocorreu um erro ao aceitar o convite.',
     });
   }
 };
 
-exports.sendMailPasswordReset = async (req, res) => {
+exports.enviarEmailResetarSenha = async (req, res) => {
   try {
     const user = req.body;
 
-    // * se não foi enviado algum parâmetro obrigatório, retorno erro 400.
     if (user.email === undefined) {
       return res.status(400).send({
         status: 'erro',
+        tipo: 'Falha na Chamada',
         mensagem: 'Requisição inválida.',
       });
     }
 
-    // * validação
     if (!validator.isEmail(user.email)) {
       return res.status(400).send({
         status: 'erro',
+        tipo: 'Validação',
         mensagem: 'E-mail não localizado.',
       });
     }
@@ -326,12 +341,12 @@ exports.sendMailPasswordReset = async (req, res) => {
 
     const connection = await mysql.createConnection(dbConfig);
     await connection.query(
-      `UPDATE user SET resetPasswordToken = ?, resetPasswordExpires = ? WHERE email = ?`,
+      'UPDATE user SET resetPasswordToken = ?, resetPasswordExpires = ? WHERE email = ?',
       [token, expires, user.email]
     );
     await connection.end();
 
-    const link = `http://${req.headers.host}/user/passwordReset/${token}`;
+    const link = `http://${req.headers.host}/forgotPassword/verify?token=${token}`;
 
     const template_body = `
       <p>Olá, </p>
@@ -350,7 +365,7 @@ exports.sendMailPasswordReset = async (req, res) => {
     // TODO: Criar o layout do e-mail que será enviado para o cliente
     await transporter.sendMail({
       from: '"Rocket Sales" <rocket-sales@amaro.com.br>',
-      to: 'claudio@amaro.com.br', // user.email
+      to: user.email,
       subject: 'Redefinição de Senha',
       text: template_text,
       html: template_body,
@@ -360,15 +375,17 @@ exports.sendMailPasswordReset = async (req, res) => {
       status: 'ok',
       mensagem: 'E-mail enviado com sucesso.',
     });
-  } catch (error) {
+  } catch (err) {
+    tratamentoErros(req, res, err);
     return res.status(400).send({
       status: 'erro',
-      mensagem: 'Erro ao resetar o password.',
+      tipo: 'Erro de Servidor',
+      mensagem: 'Erro ao enviar o e-mail para resetar a senha.',
     });
   }
 };
 
-exports.checkTokenPasswordReset = async (req, res) => {
+exports.verificarTokenResetarSenha = async (req, res) => {
   try {
     const { token } = req.params;
 
@@ -376,67 +393,75 @@ exports.checkTokenPasswordReset = async (req, res) => {
     const [
       rows,
     ] = await connection3.query(
-      'SELECT id FROM user WHERE resetPasswordToken = ? and resetPasswordExpires > ?',
+      'SELECT id FROM user WHERE (resetPasswordToken = ?) and (resetPasswordExpires > ?)',
       [token, Date.now()]
     );
     await connection3.end();
 
     if (rows.length === 1) {
-      return res.status(400).send({
-        status: 'Ok.',
+      return res.status(200).send({
+        status: 'Ok',
         mensagem: 'O token é válido.',
       });
     }
 
     return res.status(400).send({
       status: 'erro',
+      tipo: 'Validação',
       mensagem: 'Token inválido.',
     });
-  } catch (error) {
+  } catch (err) {
+    tratamentoErros(req, res, err);
     return res.status(400).send({
       status: 'erro',
-      mensagem: 'Erro ao resetar o password.',
+      tipo: 'Erro de Servidor',
+      mensagem: 'Erro ao autorizar o reset da senha.',
     });
   }
 };
 
-exports.passwordReset = async (req, res) => {
+exports.resetarSenha = async (req, res) => {
   try {
     const user = req.body;
 
-    const connection3 = await mysql.createConnection(dbConfig);
+    if (user.password === undefined || user.token === undefined) {
+      return res.status(400).send({
+        status: 'erro',
+        tipo: 'Falha na Chamada',
+        mensagem: 'Requisição inválida.',
+      });
+    }
+
+    const connection = await mysql.createConnection(dbConfig);
     const [
       rows,
-    ] = await connection3.query(
-      'SELECT id FROM user WHERE resetPasswordToken = ? and resetPasswordExpires > ?',
+    ] = await connection.query(
+      'SELECT id FROM user WHERE (resetPasswordToken = ?) and (resetPasswordExpires > ?)',
       [user.token, moment(Date.now()).format('YYYY-MM-DD HH:mm:ss')]
     );
-    await connection3.end();
+    await connection.end();
 
     if (rows.length === 1) {
       let { password } = user;
 
-      // * validação
       if (password.trim().length < 6) {
         return res.status(400).send({
           status: 'erro',
-          tipo: 'validação',
-          campo: 'senha',
-          motivo: 'fraca',
+          tipo: 'Validação',
           mensagem: 'A senha precisa conter ao menos 6 caracteres.',
         });
       }
 
       password = await bcrypt.hash(password, 10);
 
-      const connection = await mysql.createConnection(dbConfig);
+      const connection2 = await mysql.createConnection(dbConfig);
       const [
         result,
-      ] = await connection.query(
+      ] = await connection2.query(
         'UPDATE user SET password = ?, resetPasswordToken = null, resetPasswordExpires = null WHERE resetPasswordToken = ?',
         [password, user.token]
       );
-      await connection.end();
+      await connection2.end();
 
       if (result.affectedRows === 1) {
         // TODO: enviar um e-mail alertando que a senha foi alterada.
@@ -449,12 +474,15 @@ exports.passwordReset = async (req, res) => {
     }
     return res.status(400).send({
       status: 'erro',
-      mensagem: 'Erro ao alterar a senha.',
+      tipo: 'Validação',
+      mensagem: 'Token inválido.',
     });
-  } catch (error) {
+  } catch (err) {
+    tratamentoErros(req, res, err);
     return res.status(400).send({
       status: 'erro',
-      mensagem: 'Erro ao alterar a senha.',
+      tipo: 'Erro de Servidor',
+      mensagem: 'Erro ao resetar a senha.',
     });
   }
 };
