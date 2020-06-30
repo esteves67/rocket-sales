@@ -4,19 +4,7 @@ const crypto = require('crypto');
 const validator = require('validator');
 const jwt = require('jsonwebtoken');
 const moment = require('moment');
-
-// TODO: Criar Um Arquivo Externo Que Exporta O Objeto Transport.
-const nodemailer = require('nodemailer');
-
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: process.env.SMTP_PORT,
-  secure: process.env.SMTP_SECURE === 'true',
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+const transporter = require('../util/nodemailer');
 
 const dbConfig = {
   host: process.env.DB_HOST,
