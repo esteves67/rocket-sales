@@ -30,7 +30,12 @@ exports.signup = async (req, res) => {
     const user = req.body;
 
     // * se não foi enviado algum parâmetro obrigatório, retorno erro 400.
-    if (user.nome === undefined || user.password === undefined || user.email === undefined) {
+    if (
+      user.nome === undefined ||
+      user.password === undefined ||
+      user.email === undefined ||
+      user.celular === undefined
+    ) {
       return res.status(400).send({
         status: 'erro',
         mensagem: 'Requisição inválida.',
@@ -56,6 +61,23 @@ exports.signup = async (req, res) => {
         campo: 'email',
         motivo: 'inválido',
         mensagem: 'Não foi informado um e-mail válido.',
+      });
+    }
+
+    // * validação
+    user.celular = user.celular
+      .toString()
+      .replace('(', '')
+      .replace(')', '')
+      .replace('-', '')
+      .replace(' ', '');
+    if (user.celular.substring(2, 3) !== '9' || user.celular.length !== 11) {
+      return res.status(400).send({
+        status: 'erro',
+        tipo: 'validação',
+        campo: 'celular',
+        motivo: 'inválido',
+        mensagem: 'Não foi informado um celular válido.',
       });
     }
 

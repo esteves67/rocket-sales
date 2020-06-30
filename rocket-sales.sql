@@ -211,6 +211,7 @@ CREATE TABLE `user` (
   `id` int NOT NULL AUTO_INCREMENT,
   `email` varchar(100) NOT NULL,
   `nome` varchar(100) NOT NULL,
+  `celular` bigint DEFAULT NULL,
   `password` varchar(100) NOT NULL,
   `createdAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updatedAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -227,7 +228,7 @@ CREATE TABLE `user` (
 
 LOCK TABLES `user` WRITE;
 /*!40000 ALTER TABLE `user` DISABLE KEYS */;
-INSERT INTO `user` VALUES (73,'dev@rocket-sales.com.br','Dev User','$2a$10$xksWE1Umd63T/nDG1GlyvOKh80v2YygF0cPpDEFIR6UuOVbS7QIL.','2020-05-30 11:24:33','2020-05-30 11:24:33','e25a5b9a00437e1b540f4509b0b0b702a0084db9','2020-05-30 13:27:24');
+INSERT INTO `user` VALUES (73,'dev@rocket-sales.com.br','Dev User',NULL,'$2a$10$xksWE1Umd63T/nDG1GlyvOKh80v2YygF0cPpDEFIR6UuOVbS7QIL.','2020-05-30 11:24:33','2020-05-30 11:24:33','e25a5b9a00437e1b540f4509b0b0b702a0084db9','2020-05-30 13:27:24');
 /*!40000 ALTER TABLE `user` ENABLE KEYS */;
 UNLOCK TABLES;
 
