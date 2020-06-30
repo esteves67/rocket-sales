@@ -1,5 +1,6 @@
 const mysql = require('mysql2/promise');
 const { validate, format } = require('cnpj');
+const tratamentoErros = require('../util/tratamentoErros');
 
 const dbConfig = {
   host: process.env.DB_HOST,
@@ -8,11 +9,10 @@ const dbConfig = {
   database: process.env.DB_NAME,
 };
 
-exports.create = async (req, res) => {
+exports.cadastro = async (req, res) => {
   try {
     const faturamento = req.body;
 
-    // * se não foi enviado algum parâmetro obrigatório, retorno erro 400.
     if (
       faturamento.cnpj === undefined ||
       faturamento.inscricaoEstadual === undefined ||
@@ -24,91 +24,73 @@ exports.create = async (req, res) => {
     ) {
       return res.status(400).send({
         status: 'erro',
+        tipo: 'Falha na Chamada',
         mensagem: 'Requisição inválida.',
       });
     }
 
     faturamento.cnpj = format(faturamento.cnpj);
 
-    // * validação
     if (!validate(faturamento.cnpj)) {
       return res.status(400).send({
         status: 'erro',
-        tipo: 'validação',
-        campo: 'cnpj',
-        motivo: 'vazio',
-        mensagem: 'O cnpj não é válido.',
+        tipo: 'Validação',
+        mensagem: 'O CNPJ não é válido.',
       });
     }
-    // * validação
+
     if (!faturamento.razaoSocial.trim()) {
       return res.status(400).send({
         status: 'erro',
-        tipo: 'validação',
-        campo: 'razaoSocial',
-        motivo: 'vazio',
+        tipo: 'Validação',
         mensagem: 'A razão social não foi informada.',
       });
     }
 
-    // * validação
     if (!faturamento.inscricaoEstadual.trim()) {
       return res.status(400).send({
         status: 'erro',
-        tipo: 'validação',
-        campo: 'inscricaoEstadual',
-        motivo: 'vazio',
+        tipo: 'Validação',
         mensagem: 'A inscrição estadual não foi informada.',
       });
     }
-
-    // * validação
     if (!faturamento.endereco.trim()) {
       return res.status(400).send({
         status: 'erro',
-        tipo: 'validação',
-        campo: 'endereco',
-        motivo: 'vazio',
+        tipo: 'Validação',
         mensagem: 'O endereço não foi informado.',
       });
     }
 
-    // * validação
     if (!faturamento.cep.trim()) {
       return res.status(400).send({
         status: 'erro',
-        tipo: 'validação',
-        campo: 'cep',
-        motivo: 'vazio',
+        tipo: 'Validação',
         mensagem: 'O cep não foi informado.',
       });
     }
-    // * validação
+
     if (!faturamento.cidade.trim()) {
       return res.status(400).send({
         status: 'erro',
-        tipo: 'validação',
-        campo: 'cidade',
-        motivo: 'vazio',
+        tipo: 'Validação',
         mensagem: 'A cidade não foi informada.',
       });
     }
-    // * validação
+
     if (!faturamento.estado.trim()) {
       return res.status(400).send({
         status: 'erro',
-        tipo: 'validação',
-        campo: 'estado',
-        motivo: 'vazio',
+        tipo: 'Validação',
         mensagem: 'O estado não foi informado.',
       });
     }
 
     try {
-      const connection3 = await mysql.createConnection(dbConfig);
+      const connection = await mysql.createConnection(dbConfig);
       const [
-        result3,
-      ] = await connection3.query(
+        result,
+      ] = await connection.query(
         'INSERT INTO faturamento (user, cnpj, inscricaoEstadual, razaoSocial, endereco, cidade, estado, cep) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
         [
           req.userId,
@@ -121,23 +103,51 @@ exports.create = async (req, res) => {
           faturamento.cep,
         ]
       );
-      await connection3.end();
+      await connection.end();
 
       return res.status(200).send({
         status: 'ok',
         mensagem: 'Conta de faturamento incluída com sucesso.',
-        contaFaturamento: result3.insertId,
+        contaFaturamento: result.insertId,
       });
     } catch (err) {
+      tratamentoErros(req, res, err);
       return res.status(400).send({
         status: 'erro',
+        tipo: 'Erro de Servidor',
         mensagem: 'Ocorreu um erro ao inserir a conta de faturamento.',
       });
     }
   } catch (err) {
+    tratamentoErros(req, res, err);
     return res.status(400).send({
       status: 'erro',
+      tipo: 'Erro de Servidor',
       mensagem: 'Ocorreu um erro ao inserir a conta de faturamento.',
+    });
+  }
+};
+
+exports.listar = async (req, res) => {
+  try {
+    const connection = await mysql.createConnection(dbConfig);
+    const [
+      contas,
+    ] = await connection.query('SELECT cnpj, id, razaoSocial FROM faturamento WHERE (user = ?)', [
+      req.userId,
+    ]);
+    await connection.end();
+
+    return res.status(200).send({
+      status: 'ok',
+      contas,
+    });
+  } catch (err) {
+    tratamentoErros(req, res, err);
+    return res.status(400).send({
+      status: 'erro',
+      tipo: 'Erro de Servidor',
+      mensagem: 'Erro ao obter os dados das contas de faturamento.',
     });
   }
 };
