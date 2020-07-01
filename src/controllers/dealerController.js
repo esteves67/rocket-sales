@@ -1,5 +1,6 @@
 const mysql = require('mysql2/promise');
 const validator = require('validator');
+const tratamentoErros = require('../util/tratamentoErros');
 
 const dbConfig = {
   host: process.env.DB_HOST,
@@ -8,11 +9,10 @@ const dbConfig = {
   database: process.env.DB_NAME,
 };
 
-exports.create = async (req, res) => {
+exports.cadastro = async (req, res) => {
   try {
     const dealer = req.body;
 
-    // * se não foi enviado algum parâmetro obrigatório, retorno erro 400.
     if (
       dealer.nome === undefined ||
       dealer.fabricante === undefined ||
@@ -21,68 +21,88 @@ exports.create = async (req, res) => {
     ) {
       return res.status(400).send({
         status: 'erro',
+        tipo: 'Falha na Chamada',
         mensagem: 'Requisição inválida.',
       });
     }
 
-    // * validação
     if (!dealer.nome.trim()) {
       return res.status(400).send({
         status: 'erro',
-        tipo: 'validação',
-        campo: 'nome',
-        motivo: 'vazio',
-        mensagem: 'O nome não foi informado.',
+        tipo: 'Validação',
+        mensagem: 'O nome do dealer não foi informado.',
       });
     }
 
-    // * validação
     if (!dealer.fabricante.trim()) {
       return res.status(400).send({
         status: 'erro',
-        tipo: 'validação',
-        campo: 'fabricante',
-        motivo: 'vazio',
+        tipo: 'Validação',
         mensagem: 'O fabricante não foi informado.',
       });
     }
 
     try {
-      const connection2 = await mysql.createConnection(dbConfig);
-      const [result2] = await connection2.query('INSERT INTO dealer SET ?', dealer);
-      await connection2.end();
+      const connection0 = await mysql.createConnection(dbConfig);
+      const [result0] = await connection0.query(
+        'SELECT * FROM faturamento WHERE id = ? and user = ?',
+        dealer.contaFaturamento,
+        req.userId
+      );
+      await connection0.end();
 
-      const connection3 = await mysql.createConnection(dbConfig);
-      const [result3] = await connection3.query(
+      // * verifico se a conta de faturamento existe e é pertencente a esse usuário.
+      if (result0.length === 0) {
+        return res.status(400).send({
+          status: 'erro',
+          tipo: 'Validação',
+          mensagem: 'A conta de faturamento não está disponível.',
+        });
+      }
+
+      const connection = await mysql.createConnection(dbConfig);
+      const [result] = await connection.query('INSERT INTO dealer SET ?', dealer);
+      await connection.end();
+
+      const connection2 = await mysql.createConnection(dbConfig);
+      const [result2] = await connection2.query(
         'INSERT INTO dealerUsers (user, dealer, permissao) values (?, ?, ?)',
         [
           req.userId,
-          result2.insertId,
+          result.insertId,
           4, // * administrador
         ]
       );
-      await connection3.end();
+      await connection2.end();
 
       return res.status(200).send({
         status: 'ok',
         mensagem: 'Dealer incluído com sucesso.',
-        dealer: result2.insertId,
+        dealerAtivo: {
+          dealer: result2.insertId,
+          dealerNome: dealer.nome,
+          permissao: 4,
+        },
       });
     } catch (err) {
+      tratamentoErros(req, res, err);
       return res.status(400).send({
         status: 'erro',
+        tipo: 'Erro de Servidor',
         mensagem: 'Ocorreu um erro ao inserir o dealer.',
       });
     }
   } catch (err) {
+    tratamentoErros(req, res, err);
     return res.status(400).send({
       status: 'erro',
+      tipo: 'Erro de Servidor',
       mensagem: 'Ocorreu um erro ao inserir o dealer.',
     });
   }
 };
 
-exports.getAll = async (req, res) => {
+exports.listar = async (req, res) => {
   try {
     const connection = await mysql.createConnection(dbConfig);
     const [
@@ -98,21 +118,23 @@ exports.getAll = async (req, res) => {
       dealers,
     });
   } catch (err) {
+    tratamentoErros(req, res, err);
     return res.status(400).send({
       status: 'erro',
+      tipo: 'Erro de Servidor',
       mensagem: 'Ocorreu um erro ao inserir o dealer.',
     });
   }
 };
 
-exports.principal = async (req, res) => {
+exports.definirPrincipal = async (req, res) => {
   try {
     const { dealer } = req.body;
 
-    // * se não foi enviado algum parâmetro obrigatório, retorno erro 400.
     if (dealer === undefined) {
       return res.status(400).send({
         status: 'erro',
+        tipo: 'Falha na Chamada',
         mensagem: 'Requisição inválida.',
       });
     }
@@ -130,24 +152,27 @@ exports.principal = async (req, res) => {
         mensagem: 'Dealer principal definido.',
       });
     } catch (err) {
+      tratamentoErros(req, res, err);
       return res.status(400).send({
         status: 'erro',
+        tipo: 'Erro de Servidor',
         mensagem: 'Ocorreu um erro ao inserir o dealer.',
       });
     }
   } catch (err) {
+    tratamentoErros(req, res, err);
     return res.status(400).send({
       status: 'erro',
+      tipo: 'Erro de Servidor',
       mensagem: 'Ocorreu um erro ao inserir o dealer.',
     });
   }
 };
 
-exports.convidar = async (req, res) => {
+exports.convidarUsuario = async (req, res) => {
   try {
     const convite = req.body;
 
-    // * se não foi enviado algum parâmetro obrigatório, retorno erro 400.
     if (
       convite.email === undefined ||
       convite.permissao === undefined ||
@@ -155,11 +180,11 @@ exports.convidar = async (req, res) => {
     ) {
       return res.status(400).send({
         status: 'erro',
+        tipo: 'Falha na Chamada',
         mensagem: 'Requisição inválida.',
       });
     }
 
-    // * validação
     if (!validator.isEmail(convite.email)) {
       return res.status(400).send({
         status: 'erro',
@@ -180,16 +205,18 @@ exports.convidar = async (req, res) => {
         mensagem: 'Usuário convidado com sucesso.',
       });
     } catch (err) {
-      console.log(err);
+      tratamentoErros(req, res, err);
       return res.status(400).send({
         status: 'erro',
+        tipo: 'Erro de Servidor',
         mensagem: 'Ocorreu um erro ao convidar o usuário.',
       });
     }
   } catch (err) {
-    console.log(err);
+    tratamentoErros(req, res, err);
     return res.status(400).send({
       status: 'erro',
+      tipo: 'Erro de Servidor',
       mensagem: 'Ocorreu um erro ao convidar o usuário.',
     });
   }
