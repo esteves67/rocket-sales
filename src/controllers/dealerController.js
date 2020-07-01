@@ -42,24 +42,33 @@ exports.cadastro = async (req, res) => {
       });
     }
 
+    if (dealer.plano !== 1 && dealer.contaFaturamento === null) {
+      return res.status(400).send({
+        status: 'erro',
+        tipo: 'Validação',
+        mensagem: 'A conta de faturamento não foi informada.',
+      });
+    }
     try {
-      const connection0 = await mysql.createConnection(dbConfig);
-      const [result0] = await connection0.query(
-        'SELECT * FROM faturamento WHERE id = ? and user = ?',
-        dealer.contaFaturamento,
-        req.userId
-      );
-      await connection0.end();
+      if (dealer.plano !== 1) {
+        const connection0 = await mysql.createConnection(dbConfig);
+        const [
+          result0,
+        ] = await connection0.query('SELECT * FROM faturamento WHERE id = ? and user = ?', [
+          dealer.contaFaturamento,
+          req.userId,
+        ]);
+        await connection0.end();
 
-      // * verifico se a conta de faturamento existe e é pertencente a esse usuário.
-      if (result0.length === 0) {
-        return res.status(400).send({
-          status: 'erro',
-          tipo: 'Validação',
-          mensagem: 'A conta de faturamento não está disponível.',
-        });
+        // * verifico se a conta de faturamento existe e é pertencente a esse usuário.
+        if (result0.length === 0) {
+          return res.status(400).send({
+            status: 'erro',
+            tipo: 'Validação',
+            mensagem: 'A conta de faturamento não está disponível.',
+          });
+        }
       }
-
       const connection = await mysql.createConnection(dbConfig);
       const [result] = await connection.query('INSERT INTO dealer SET ?', dealer);
       await connection.end();
