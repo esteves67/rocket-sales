@@ -9,7 +9,7 @@ router.get('/autenticacao', controller.autenticacao);
 router.get('/convites', auth, controller.listarConvites);
 router.post('/convite', auth, controller.aceitarConvite);
 router.get('/resetarSenha', controller.enviarEmailResetarSenha);
-router.get('/resetarSenha/:token', controller.verificarTokenResetarSenha);
+router.get('/verificarTokenResetarSenha', controller.verificarTokenResetarSenha);
 router.post('/resetarSenha', controller.resetarSenha);
 
 module.exports = router;

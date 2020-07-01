@@ -184,7 +184,7 @@ exports.autenticacao = async (req, res) => {
 
         const connection2 = await mysql.createConnection(dbConfig);
         const [rows2] = await connection2.query(
-          'SELECT dealer.nome, dealer, permissao FROM dealerUsers INNER JOIN dealer on dealerUser.dealer = dealer.id WHERE user = ? ORDER BY principal DESC',
+          'SELECT dealer.nome, dealer, permissao FROM dealerUsers INNER JOIN dealer on dealerUsers.dealer = dealer.id WHERE user = ? ORDER BY principal DESC',
           rows[0].id
         );
         await connection2.end();
@@ -258,9 +258,9 @@ exports.listarConvites = async (req, res) => {
 
 exports.aceitarConvite = async (req, res) => {
   try {
-    const convite = req.body;
+    const { convite } = req.body;
 
-    if (convite.convite === undefined) {
+    if (convite === undefined) {
       return res.status(400).send({
         status: 'erro',
         tipo: 'Falha na Chamada',
@@ -270,10 +270,11 @@ exports.aceitarConvite = async (req, res) => {
 
     try {
       const connection = await mysql.createConnection(dbConfig);
-      const [rows] = await connection.query(
-        'SELECT * FROM dealerConvites WHERE (id = ?) and (email = ?)',
-        convite.convite,
-        req.userEmail
+      const [
+        rows,
+      ] = await connection.query(
+        'SELECT * FROM dealerConvites WHERE (id = ?) and (email = ?) and (aceitoEm is null)',
+        [convite, req.userEmail]
       );
       await connection.end();
 
@@ -288,7 +289,7 @@ exports.aceitarConvite = async (req, res) => {
       const connection1 = await mysql.createConnection(dbConfig);
       await connection1.query(
         'UPDATE dealerConvites set aceitoEm = CURRENT_TIMESTAMP WHERE id = ?',
-        convite.convite
+        convite
       );
       await connection1.end();
 
@@ -300,7 +301,7 @@ exports.aceitarConvite = async (req, res) => {
       await connection2.end();
 
       const connection3 = await mysql.createConnection(dbConfig);
-      const [rows3] = await connection3.query('SELECT nome FROM dealers WHERE (id = ?)', [
+      const [rows3] = await connection3.query('SELECT nome FROM dealer WHERE (id = ?)', [
         rows[0].dealer,
       ]);
       await connection3.end();
@@ -391,7 +392,7 @@ exports.enviarEmailResetarSenha = async (req, res) => {
       html: template_body,
     });
 
-    return res.status(400).send({
+    return res.status(200).send({
       status: 'ok',
       mensagem: 'E-mail enviado com sucesso.',
     });
@@ -407,14 +408,22 @@ exports.enviarEmailResetarSenha = async (req, res) => {
 
 exports.verificarTokenResetarSenha = async (req, res) => {
   try {
-    const { token } = req.params;
+    const user = req.body;
+
+    if (user.token === undefined) {
+      return res.status(400).send({
+        status: 'erro',
+        tipo: 'Falha na Chamada',
+        mensagem: 'Requisição inválida.',
+      });
+    }
 
     const connection3 = await mysql.createConnection(dbConfig);
     const [
       rows,
     ] = await connection3.query(
       'SELECT id FROM user WHERE (resetPasswordToken = ?) and (resetPasswordExpires > ?)',
-      [token, Date.now()]
+      [user.token, Date.now()]
     );
     await connection3.end();
 

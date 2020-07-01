@@ -195,7 +195,7 @@ exports.convidarUsuario = async (req, res) => {
     try {
       const connection3 = await mysql.createConnection(dbConfig);
       await connection3.query(
-        'INSERT INTO dealerConvites (dealer, admin, email, permissao) VALUES (?, ?, ?, ?)',
+        'INSERT INTO dealerConvites (dealer, convidante, email, permissao) VALUES (?, ?, ?, ?)',
         [convite.dealer, req.userId, convite.email, convite.permissao]
       );
       await connection3.end();
