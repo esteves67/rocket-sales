@@ -1,10 +1,10 @@
 CREATE DATABASE  IF NOT EXISTS `rocket-sales` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
 USE `rocket-sales`;
--- MySQL dump 10.13  Distrib 8.0.20, for Linux (x86_64)
+-- MySQL dump 10.13  Distrib 8.0.20, for Win64 (x86_64)
 --
--- Host: 127.0.0.1    Database: rocket-sales
+-- Host: localhost    Database: rocket-sales
 -- ------------------------------------------------------
--- Server version	8.0.20-0ubuntu0.20.04.1
+-- Server version	8.0.20
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -51,47 +51,47 @@ INSERT INTO `dealer` VALUES (1,'Honda Rocket Líbero Badaró','Honda',1,NULL,'20
 UNLOCK TABLES;
 
 --
--- Table structure for table `dealerConvites`
+-- Table structure for table `dealerconvites`
 --
 
-DROP TABLE IF EXISTS `dealerConvites`;
+DROP TABLE IF EXISTS `dealerconvites`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `dealerConvites` (
+CREATE TABLE `dealerconvites` (
   `id` int NOT NULL AUTO_INCREMENT,
   `dealer` int NOT NULL,
-  `admin` int NOT NULL,
+  `convidante` int NOT NULL,
   `email` varchar(45) NOT NULL,
   `permissao` int NOT NULL,
   `createdAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `aceitoEm` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `fk_dealerConvites_1_idx` (`dealer`),
-  KEY `fk_dealerConvites_2_idx` (`admin`),
+  KEY `fk_dealerConvites_2_idx` (`convidante`),
   KEY `fk_dealerConvites_3_idx` (`permissao`),
   CONSTRAINT `fk_dealerConvites_1` FOREIGN KEY (`dealer`) REFERENCES `dealer` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
-  CONSTRAINT `fk_dealerConvites_2` FOREIGN KEY (`admin`) REFERENCES `user` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
+  CONSTRAINT `fk_dealerConvites_2` FOREIGN KEY (`convidante`) REFERENCES `user` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `fk_dealerConvites_3` FOREIGN KEY (`permissao`) REFERENCES `permissoes` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `dealerConvites`
+-- Dumping data for table `dealerconvites`
 --
 
-LOCK TABLES `dealerConvites` WRITE;
-/*!40000 ALTER TABLE `dealerConvites` DISABLE KEYS */;
-/*!40000 ALTER TABLE `dealerConvites` ENABLE KEYS */;
+LOCK TABLES `dealerconvites` WRITE;
+/*!40000 ALTER TABLE `dealerconvites` DISABLE KEYS */;
+/*!40000 ALTER TABLE `dealerconvites` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
--- Table structure for table `dealerUsers`
+-- Table structure for table `dealerusers`
 --
 
-DROP TABLE IF EXISTS `dealerUsers`;
+DROP TABLE IF EXISTS `dealerusers`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `dealerUsers` (
+CREATE TABLE `dealerusers` (
   `id` int NOT NULL AUTO_INCREMENT,
   `dealer` int NOT NULL,
   `user` int NOT NULL,
@@ -108,13 +108,13 @@ CREATE TABLE `dealerUsers` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `dealerUsers`
+-- Dumping data for table `dealerusers`
 --
 
-LOCK TABLES `dealerUsers` WRITE;
-/*!40000 ALTER TABLE `dealerUsers` DISABLE KEYS */;
-INSERT INTO `dealerUsers` VALUES (1,1,73,4,_binary '\0');
-/*!40000 ALTER TABLE `dealerUsers` ENABLE KEYS */;
+LOCK TABLES `dealerusers` WRITE;
+/*!40000 ALTER TABLE `dealerusers` DISABLE KEYS */;
+INSERT INTO `dealerusers` VALUES (1,1,73,4,_binary '\0');
+/*!40000 ALTER TABLE `dealerusers` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -153,6 +153,61 @@ INSERT INTO `faturamento` VALUES (1,73,'00.000.000/0000-00','Isento','Honda Rock
 UNLOCK TABLES;
 
 --
+-- Table structure for table `menusmodulos`
+--
+
+DROP TABLE IF EXISTS `menusmodulos`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `menusmodulos` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `modulo` varchar(45) DEFAULT NULL,
+  `nome` varchar(45) DEFAULT NULL,
+  `rota` varchar(45) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `menusmodulos`
+--
+
+LOCK TABLES `menusmodulos` WRITE;
+/*!40000 ALTER TABLE `menusmodulos` DISABLE KEYS */;
+INSERT INTO `menusmodulos` VALUES (6,'showroom','Dashboard','/dashboard'),(7,'perseguidor','Dashboard','/dashboard'),(8,'prospeccao','Dashboard','/dashboard'),(9,'showroom','Showroom','/showroom'),(10,'base','Cadastrar Empresa','/cadastrarempresa');
+/*!40000 ALTER TABLE `menusmodulos` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `menuspermissoes`
+--
+
+DROP TABLE IF EXISTS `menuspermissoes`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `menuspermissoes` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `menu` int NOT NULL,
+  `permissao` int NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `fk_menuspermissoes_1_idx` (`permissao`),
+  KEY `fk_menuspermissoes_2_idx` (`menu`),
+  CONSTRAINT `fk_menuspermissoes_1` FOREIGN KEY (`permissao`) REFERENCES `permissoes` (`id`),
+  CONSTRAINT `fk_menuspermissoes_2` FOREIGN KEY (`menu`) REFERENCES `menusmodulos` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `menuspermissoes`
+--
+
+LOCK TABLES `menuspermissoes` WRITE;
+/*!40000 ALTER TABLE `menuspermissoes` DISABLE KEYS */;
+INSERT INTO `menuspermissoes` VALUES (1,6,1),(2,7,1),(3,8,1),(4,9,1),(5,7,2),(6,8,2),(7,8,3),(8,9,3),(9,6,4),(10,7,4),(11,8,4),(12,9,4);
+/*!40000 ALTER TABLE `menuspermissoes` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `permissoes`
 --
 
@@ -186,8 +241,11 @@ DROP TABLE IF EXISTS `planos`;
 CREATE TABLE `planos` (
   `id` int NOT NULL AUTO_INCREMENT,
   `nome` varchar(45) NOT NULL,
+  `showroom` varchar(45) NOT NULL DEFAULT '0',
+  `perseguidor` varchar(45) NOT NULL DEFAULT '0',
+  `prospeccao` varchar(45) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -196,7 +254,7 @@ CREATE TABLE `planos` (
 
 LOCK TABLES `planos` WRITE;
 /*!40000 ALTER TABLE `planos` DISABLE KEYS */;
-INSERT INTO `planos` VALUES (1,'Grátis'),(2,'Completo');
+INSERT INTO `planos` VALUES (1,'Grátis','1','0','0'),(2,'Bronze','1','1','0'),(3,'Prata','1','0','1'),(4,'Ouro','1','1','1');
 /*!40000 ALTER TABLE `planos` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -249,4 +307,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2020-05-31 18:23:39
+-- Dump completed on 2020-07-01 14:00:28
