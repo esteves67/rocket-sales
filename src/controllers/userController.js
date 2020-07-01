@@ -184,17 +184,26 @@ exports.autenticacao = async (req, res) => {
 
         const connection2 = await mysql.createConnection(dbConfig);
         const [rows2] = await connection2.query(
-          'SELECT dealer, permissao FROM dealerUsers WHERE user = ? ORDER BY principal DESC',
+          'SELECT dealer.nome, dealer, permissao FROM dealerUsers INNER JOIN dealer on dealerUser.dealer = dealer.id WHERE user = ? ORDER BY principal DESC',
           rows[0].id
         );
         await connection2.end();
+
+        let dealerAtivo = null;
+
+        if (rows2.length > 0) {
+          dealerAtivo = {
+            dealer: rows2[0].dealer,
+            dealerNome: rows2[0].nome,
+            permissao: rows2[0].permissao,
+          };
+        }
 
         return res.status(200).send({
           status: 'ok',
           mensagem: 'Login realizado com sucesso.',
           nome: rows[0].nome,
-          empresa: rows2.length > 0 ? rows2[0].dealer : null,
-          permissao: rows2.length > 0 ? rows2[0].permissao : null,
+          dealerAtivo,
           token,
         });
       }
@@ -290,9 +299,20 @@ exports.aceitarConvite = async (req, res) => {
       );
       await connection2.end();
 
+      const connection3 = await mysql.createConnection(dbConfig);
+      const [rows3] = await connection3.query('SELECT nome FROM dealers WHERE (id = ?)', [
+        rows[0].dealer,
+      ]);
+      await connection3.end();
+
       return res.status(200).send({
         status: 'ok',
         mensagem: 'Convite aceito com sucesso.',
+        dealerAtivo: {
+          dealer: rows[0].dealer,
+          dealerNome: rows3[0].nome,
+          permissao: rows[0].permissao,
+        },
       });
     } catch (err) {
       tratamentoErros(req, res, err);
