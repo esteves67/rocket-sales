@@ -45,9 +45,9 @@ exports.listarModulos = async (req, res) => {
 
 exports.listarMenus = async (req, res) => {
   try {
-    const { modulo } = req.body;
+    const { modulo, dealer } = req.body;
 
-    if (modulo === undefined) {
+    if (modulo === undefined || dealer === undefined) {
       return res.status(400).send({
         status: 'erro',
         tipo: 'Falha na Chamada',
@@ -59,8 +59,8 @@ exports.listarMenus = async (req, res) => {
     const [
       menus,
     ] = await connection.query(
-      'select modulo, nome, rota  from dealerusers  inner join menuspermissoes on dealerusers.permissao = menuspermissoes.permissao inner join menusmodulos on menuspermissoes.menu = menusmodulos.id where user = ? and modulo = ?',
-      [req.userId, modulo]
+      'select modulo, nome, rota from dealerusers inner join menuspermissoes on dealerusers.permissao = menuspermissoes.permissao inner join menusmodulos on menuspermissoes.menu = menusmodulos.id where user = ? and modulo = ? and dealer = ?',
+      [req.userId, modulo, dealer]
     );
     await connection.end();
 
