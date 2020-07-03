@@ -153,6 +153,55 @@ INSERT INTO `faturamento` VALUES (1,73,'00.000.000/0000-00','Isento','Honda Rock
 UNLOCK TABLES;
 
 --
+-- Table structure for table `leads`
+--
+
+DROP TABLE IF EXISTS `leads`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `leads` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `nome` varchar(200) DEFAULT NULL,
+  `cpf` varchar(45) DEFAULT NULL,
+  `dataNascimento` date DEFAULT NULL,
+  `telefone1` varchar(45) DEFAULT NULL,
+  `telefone2` bigint DEFAULT NULL,
+  `email` varchar(200) DEFAULT NULL,
+  `veiculoInteresse` varchar(200) DEFAULT NULL,
+  `vendedor` varchar(200) DEFAULT NULL,
+  `testdrive` tinyint DEFAULT NULL,
+  `testdriveMotivo` varchar(200) DEFAULT NULL,
+  `testDriveHora` datetime DEFAULT NULL,
+  `statusNegociacao` varchar(200) DEFAULT NULL,
+  `numeroPedido` varchar(200) DEFAULT NULL,
+  `motivoDesistencia` varchar(200) DEFAULT NULL,
+  `horaEntrada` datetime DEFAULT NULL,
+  `horaSaida` datetime DEFAULT NULL,
+  `observacao` varchar(45) DEFAULT NULL,
+  `comoconheceu` varchar(45) DEFAULT NULL,
+  `createdAt` datetime DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` datetime DEFAULT CURRENT_TIMESTAMP,
+  `createdBy` int DEFAULT NULL,
+  `dealer` int DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `fk1_idx` (`createdBy`),
+  KEY `fk2_idx` (`dealer`),
+  CONSTRAINT `fk1` FOREIGN KEY (`createdBy`) REFERENCES `user` (`id`),
+  CONSTRAINT `fk2` FOREIGN KEY (`dealer`) REFERENCES `dealer` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `leads`
+--
+
+LOCK TABLES `leads` WRITE;
+/*!40000 ALTER TABLE `leads` DISABLE KEYS */;
+INSERT INTO `leads` VALUES (2,'Claudio Scarpa','123.123.123-77','1989-05-13','11935113700',11935113700,'devdev@amaro.com.br','Jetta','Claudio',0,'Não tinha o carro dispnível.','2020-09-07 07:42:00',NULL,NULL,NULL,'2020-07-03 08:00:00','2020-03-07 11:00:00','','Revista','2020-07-03 14:13:18','2020-07-03 14:13:18',76,1),(3,'Claudio Scarpa',NULL,NULL,'11935113700',NULL,'devdev@amaro.com.br','Jetta','Claudio',NULL,NULL,NULL,NULL,NULL,NULL,'2020-07-03 08:00:00',NULL,'','Revista','2020-07-03 14:20:20','2020-07-03 14:20:20',76,1);
+/*!40000 ALTER TABLE `leads` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `menusmodulos`
 --
 
