@@ -16,5 +16,6 @@ app.use('/user', require('./routes/userRoute'));
 app.use('/dealer', require('./routes/dealerRoute'));
 app.use('/faturamento', require('./routes/faturamentoRoute'));
 app.use('/menu', require('./routes/menuRoute'));
+app.use('/showroom', require('./routes/showroomRoute'));
 
 module.exports = app;
