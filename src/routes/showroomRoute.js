@@ -1,14 +1,14 @@
 const express = require('express');
-const auth = require('../util/auth');
+const { auth, authDealer } = require('../util/auth');
 const controller = require('../controllers/showroomController');
 
 const router = express.Router();
 
-router.post('/cadastro', auth, controller.cadastro);
-router.post('/atualizar', auth, controller.atualizar);
-router.post('/registraSaida', auth, controller.registraSaida);
-router.post('/registraTestDrive', auth, controller.registraTestDrive);
-router.post('/registraNegativaTestDrive', auth, controller.registraNegativaTestDrive);
-router.get('/listar', auth, controller.listar);
+router.post('/cadastro', auth, authDealer, controller.cadastro);
+router.post('/atualizar', auth, authDealer, controller.atualizar);
+router.post('/registraSaida', auth, authDealer, controller.registraSaida);
+router.post('/registraTestDrive', auth, authDealer, controller.registraTestDrive);
+router.post('/registraNegativaTestDrive', auth, authDealer, controller.registraNegativaTestDrive);
+router.get('/listar', auth, authDealer, controller.listar);
 
 module.exports = router;
