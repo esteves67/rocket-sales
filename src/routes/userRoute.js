@@ -8,6 +8,7 @@ router.post('/cadastro', controller.cadastro);
 router.get('/autenticacao', controller.autenticacao);
 router.get('/convites', auth, controller.listarConvites);
 router.post('/convite', auth, controller.aceitarConvite);
+router.get('/listarVendedores', auth, controller.listarVendedores);
 router.get('/resetarSenha', controller.enviarEmailResetarSenha);
 router.get('/verificarTokenResetarSenha', controller.verificarTokenResetarSenha);
 router.post('/resetarSenha', controller.resetarSenha);

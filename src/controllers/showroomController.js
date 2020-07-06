@@ -412,9 +412,14 @@ exports.registraNegativaTestDrive = async (req, res) => {
 
 exports.listar = async (req, res) => {
   try {
-    const { dealer, dataInicial, dataFinal } = req.body;
+    const { dealer, dataInicial, dataFinal, naLoja } = req.body;
 
-    if (dealer === undefined) {
+    if (
+      dealer === undefined ||
+      dataInicial === undefined ||
+      dataFinal === undefined ||
+      naLoja === undefined
+    ) {
       return res.status(400).send({
         status: 'erro',
         tipo: 'Falha na Chamada',
@@ -440,11 +445,16 @@ exports.listar = async (req, res) => {
       });
     }
 
+    let SQLnaLoja = '';
+    if (naLoja === true) {
+      SQLnaLoja = ' AND horaSaida is null';
+    }
+
     const connection = await mysql.createConnection(dbConfig);
     const [
       leads,
     ] = await connection.query(
-      'SELECT nome, vendedor, veiculoInteresse, horaEntrada, horaSaida FROM leads WHERE dealer = ? and horaEntrada BETWEEN ? AND ?',
+      `SELECT nome, vendedor, veiculoInteresse, horaEntrada, horaSaida FROM leads WHERE dealer = ? and horaEntrada BETWEEN ? AND ? ${SQLnaLoja}`,
       [dealer, dataInicial1, dataFinal1]
     );
     await connection.end();
@@ -459,6 +469,65 @@ exports.listar = async (req, res) => {
       status: 'erro',
       tipo: 'Erro de Servidor',
       mensagem: 'Erro ao obter a lista de leads.',
+    });
+  }
+};
+
+exports.alterarStatus = async (req, res) => {
+  try {
+    const { dealer, lead, status, numeroPedido, motivoDesistencia } = req.body;
+
+    if (
+      dealer === undefined ||
+      lead === undefined ||
+      status === undefined ||
+      numeroPedido === undefined ||
+      motivoDesistencia === undefined
+    ) {
+      return res.status(400).send({
+        status: 'erro',
+        tipo: 'Falha na Chamada',
+        mensagem: 'Requisição inválida.',
+      });
+    }
+
+    if (status === 'Comprou') {
+      if (numeroPedido === '') {
+        return res.status(400).send({
+          status: 'erro',
+          tipo: 'Validação',
+          mensagem: 'O número do pedido não foi informado.',
+        });
+      }
+    }
+
+    if (status === 'Desistiu') {
+      if (motivoDesistencia === '') {
+        return res.status(400).send({
+          status: 'erro',
+          tipo: 'Validação',
+          mensagem: 'Não foi informado o motivo da desistência.',
+        });
+      }
+    }
+
+    const connection = await mysql.createConnection(dbConfig);
+    await connection.query(
+      'UPDATE leads SET statusNegociacao = ?, numeroPedido = NULLIF(?, ""), motivoDesistencia = NULLIF(?, "") WHERE id = ? and dealer = ?;',
+      [status, numeroPedido, motivoDesistencia, lead, dealer]
+    );
+    await connection.end();
+
+    return res.status(200).send({
+      status: 'ok',
+      mensagem: 'Cliente atualizado com sucesso!',
+    });
+  } catch (err) {
+    tratamentoErros(req, res, err);
+    return res.status(400).send({
+      status: 'erro',
+      tipo: 'Erro de Servidor',
+      mensagem: 'Erro ao atualizar cliente.',
     });
   }
 };

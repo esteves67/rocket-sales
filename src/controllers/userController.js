@@ -515,3 +515,38 @@ exports.resetarSenha = async (req, res) => {
     });
   }
 };
+
+exports.listarVendedores = async (req, res) => {
+  const { dealer } = req.body;
+
+  if (
+    dealer === undefined
+  ) {
+    return res.status(400).send({
+      status: 'erro',
+      tipo: 'Falha na Chamada',
+      mensagem: 'Requisição inválida.',
+    });
+  }
+
+  try {
+    const connection = await mysql.createConnection(dbConfig);
+    const [vendedores] = await connection.query(
+      'SELECT user.id, nome FROM user inner join dealerusers on dealerusers.user = user.id WHERE dealer = ?',
+      dealer
+    );
+    await connection.end();
+
+    return res.status(200).send({
+      status: 'ok',
+      vendedores,
+    });
+  } catch (err) {
+    tratamentoErros(req, res, err);
+    return res.status(400).send({
+      status: 'erro',
+      tipo: 'Erro de Servidor',
+      mensagem: 'Ocorreu um erro ao obter os vendedores.',
+    });
+  }
+};
