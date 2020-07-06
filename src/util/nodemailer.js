@@ -1,4 +1,6 @@
 const nodemailer = require('nodemailer');
+const hbs = require('nodemailer-express-handlebars');
+const path = require('path');
 
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
@@ -9,5 +11,12 @@ const transporter = nodemailer.createTransport({
     pass: process.env.SMTP_PASS,
   },
 });
+
+transporter.use(
+  'compile',
+  hbs({
+    viewPath: path.join(__dirname, '..', 'mailTemplates'),
+  })
+);
 
 module.exports = transporter;

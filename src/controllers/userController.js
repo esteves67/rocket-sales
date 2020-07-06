@@ -102,14 +102,20 @@ exports.cadastro = async (req, res) => {
       await connection2.end();
 
       const connection3 = await mysql.createConnection(dbConfig);
-      const [rows] = await connection3.query('SELECT id FROM user WHERE email = ?', user.email);
+      const [rows] = await connection3.query('SELECT id, nome, email FROM user WHERE email = ?', user.email);
       await connection3.end();
 
       const token = jwt.sign({ user: rows[0].id, email: rows[0].email }, process.env.SECRET, {
         expiresIn: 86400, // 24 horas
       });
 
-      // TODO: Falta enviar um e-mail de boas-vindas para o usuário.
+      await transporter.sendMail({
+        from: '"Rocket Sales" <rocket-sales@amaro.com.br>',
+        to: rows[0].email,
+        subject: 'Bem-Vindo ao Rocket Sales',
+        template: 'BoasVindas',
+        context: { nome: rows[0].nome },
+      });
 
       return res.status(200).send({
         status: 'ok',
@@ -360,6 +366,18 @@ exports.enviarEmailResetarSenha = async (req, res) => {
     // * defino a data que o token vai expirar
     const expires = moment(Date.now() + 7200000).format('YYYY-MM-DD HH:mm:ss'); // 2 Horas
 
+    const connection1 = await mysql.createConnection(dbConfig);
+    const [rows] = await connection1.query('SELECT nome FROM user WHERE email = ?', [user.email]);
+    await connection1.end();
+
+    if (rows.length === 0) {
+      return res.status(400).send({
+        status: 'erro',
+        tipo: 'Validação',
+        mensagem: 'E-mail não encontrado.',
+      });
+    }
+
     const connection = await mysql.createConnection(dbConfig);
     await connection.query(
       'UPDATE user SET resetPasswordToken = ?, resetPasswordExpires = ? WHERE email = ?',
@@ -369,27 +387,15 @@ exports.enviarEmailResetarSenha = async (req, res) => {
 
     const link = `http://${req.headers.host}/forgotPassword/verify?token=${token}`;
 
-    const template_body = `
-      <p>Olá, </p>
-      <p>Para redefinir a senha clique aqui: <a href="${link}">${link}</a>.</p>
-      <p>Caso você não tenha solicitado a redefinição de senha, por favor, desconsidere esse e-mail. </p>
-      <p>Equipe Rocket Sales</p>
-    `;
-
-    const template_text = `
-      Olá,
-      Para redefinir a senha clique aqui: <a href="${link}">${link}</a>.
-      Caso você não tenha solicitado a redefinição de senha, por favor, desconsidere esse e-mail.
-      Equipe Rocket Sales
-    `;
-
-    // TODO: Criar o layout do e-mail que será enviado para o cliente
     await transporter.sendMail({
       from: '"Rocket Sales" <rocket-sales@amaro.com.br>',
       to: user.email,
       subject: 'Redefinição de Senha',
-      text: template_text,
-      html: template_body,
+      template: 'RedefinicaoSenha',
+      context: {
+        link,
+        nome: rows[0].nome,
+      },
     });
 
     return res.status(200).send({
@@ -465,7 +471,7 @@ exports.resetarSenha = async (req, res) => {
     const [
       rows,
     ] = await connection.query(
-      'SELECT id FROM user WHERE (resetPasswordToken = ?) and (resetPasswordExpires > ?)',
+      'SELECT id, email, nome FROM user WHERE (resetPasswordToken = ?) and (resetPasswordExpires > ?)',
       [user.token, moment(Date.now()).format('YYYY-MM-DD HH:mm:ss')]
     );
     await connection.end();
@@ -493,7 +499,13 @@ exports.resetarSenha = async (req, res) => {
       await connection2.end();
 
       if (result.affectedRows === 1) {
-        // TODO: enviar um e-mail alertando que a senha foi alterada.
+        await transporter.sendMail({
+          from: '"Rocket Sales" <rocket-sales@amaro.com.br>',
+          to: rows[0].email,
+          subject: 'Redefinição de Senha',
+          template: 'AlteracaoSenha',
+          context: { nome: rows[0].nome },
+        });
 
         return res.status(200).send({
           status: 'ok',
@@ -519,9 +531,7 @@ exports.resetarSenha = async (req, res) => {
 exports.listarVendedores = async (req, res) => {
   const { dealer } = req.body;
 
-  if (
-    dealer === undefined
-  ) {
+  if (dealer === undefined) {
     return res.status(400).send({
       status: 'erro',
       tipo: 'Falha na Chamada',

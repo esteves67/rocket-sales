@@ -1,5 +1,6 @@
 const mysql = require('mysql2/promise');
 const validator = require('validator');
+const transporter = require('../util/nodemailer');
 const tratamentoErros = require('../util/tratamentoErros');
 
 const dbConfig = {
@@ -74,7 +75,7 @@ exports.cadastro = async (req, res) => {
       await connection.end();
 
       const connection2 = await mysql.createConnection(dbConfig);
-      const [result2] = await connection2.query(
+      await connection2.query(
         'INSERT INTO dealerUsers (user, dealer, permissao) values (?, ?, ?)',
         [
           req.userId,
@@ -88,7 +89,7 @@ exports.cadastro = async (req, res) => {
         status: 'ok',
         mensagem: 'Dealer incluído com sucesso.',
         dealerAtivo: {
-          dealer: result2.insertId,
+          dealer: result.insertId,
           dealerNome: dealer.nome,
           permissao: 4,
         },
@@ -208,6 +209,20 @@ exports.convidarUsuario = async (req, res) => {
         [convite.dealer, req.userId, convite.email, convite.permissao]
       );
       await connection3.end();
+
+      const connection4 = await mysql.createConnection(dbConfig);
+      const [rows] = await connection4.query('SELECT nome FROM dealer where ID = ?', [
+        convite.dealer,
+      ]);
+      await connection4.end();
+
+      await transporter.sendMail({
+        from: '"Rocket Sales" <rocket-sales@amaro.com.br>',
+        to: convite.email,
+        subject: 'Você recebeu um convite',
+        template: 'Convite',
+        context: { dealerNome: rows[0].nome },
+      });
 
       return res.status(200).send({
         status: 'ok',
