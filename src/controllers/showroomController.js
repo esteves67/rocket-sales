@@ -199,14 +199,6 @@ exports.atualizar = async (req, res) => {
       });
     }
 
-    if (!telefone2.trim()) {
-      return res.status(400).send({
-        status: 'erro',
-        tipo: 'Validação',
-        mensagem: 'O telefone do cliente não foi informado.',
-      });
-    }
-
     if (!dataNascimento.trim()) {
       return res.status(400).send({
         status: 'erro',
