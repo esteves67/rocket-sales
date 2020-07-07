@@ -188,7 +188,7 @@ CREATE TABLE `leads` (
   KEY `fk2_idx` (`dealer`),
   CONSTRAINT `fk1` FOREIGN KEY (`createdBy`) REFERENCES `user` (`id`),
   CONSTRAINT `fk2` FOREIGN KEY (`dealer`) REFERENCES `dealer` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
