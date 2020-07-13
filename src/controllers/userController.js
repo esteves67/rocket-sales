@@ -102,10 +102,13 @@ exports.cadastro = async (req, res) => {
       await connection2.end();
 
       const connection3 = await mysql.createConnection(dbConfig);
-      const [rows] = await connection3.query('SELECT id, nome, email FROM user WHERE email = ?', user.email);
+      const [rows] = await connection3.query(
+        'SELECT id, nome, email FROM user WHERE email = ?',
+        user.email
+      );
       await connection3.end();
 
-      const token = jwt.sign({ user: rows[0].id, email: rows[0].email }, process.env.SECRET, {
+      const token = jwt.sign({ user: rows[0].id, email: rows[0].email, nome: rows[0].nome }, process.env.SECRET, {
         expiresIn: 86400, // 24 horas
       });
 
@@ -121,6 +124,98 @@ exports.cadastro = async (req, res) => {
         status: 'ok',
         mensagem: 'Usuário incluído com sucesso.',
         token,
+      });
+    } catch (err) {
+      tratamentoErros(req, res, err);
+      return res.status(400).send({
+        status: 'erro',
+        tipo: 'Erro de Servidor',
+        mensagem: 'Ocorreu um erro ao inserir o usuário.',
+      });
+    }
+  } catch (err) {
+    tratamentoErros(req, res, err);
+    return res.status(400).send({
+      status: 'erro',
+      tipo: 'Erro de Servidor',
+      mensagem: 'Ocorreu um erro ao inserir o usuário.',
+    });
+  }
+};
+
+exports.editar = async (req, res) => {
+  try {
+    const user = req.body;
+
+    if (user.nome === undefined || user.email === undefined || user.celular === undefined) {
+      return res.status(400).send({
+        status: 'erro',
+        tipo: 'Falha na Chamada',
+        mensagem: 'Requisição inválida.',
+      });
+    }
+
+    if (!user.nome.trim()) {
+      return res.status(400).send({
+        status: 'erro',
+        tipo: 'Validação',
+        mensagem: 'O nome não foi informado.',
+      });
+    }
+
+    if (!validator.isEmail(user.email)) {
+      return res.status(400).send({
+        status: 'erro',
+        tipo: 'Validação',
+        mensagem: 'Não foi informado um e-mail válido.',
+      });
+    }
+
+    user.celular = user.celular
+      .toString()
+      .replace('(', '')
+      .replace(')', '')
+      .replace('-', '')
+      .replace(' ', '');
+    if (user.celular.substring(2, 3) !== '9' || user.celular.length !== 11) {
+      return res.status(400).send({
+        status: 'erro',
+        tipo: 'Validação',
+        mensagem: 'Não foi informado um celular válido.',
+      });
+    }
+
+    // * verifica se o usuário já existe.
+    try {
+      const connection = await mysql.createConnection(dbConfig);
+      const [rows] = await connection.execute('SELECT * FROM user WHERE email = ?', [user.email]);
+      await connection.end();
+
+      if (rows.length === 1) {
+        return res.status(400).send({
+          status: 'erro',
+          tipo: 'Validação',
+          mensagem: 'Essa conta de e-mail já está sendo utilizada.',
+        });
+      }
+    } catch (err) {
+      tratamentoErros(req, res, err);
+      return res.status(400).send({
+        status: 'erro',
+        tipo: 'Erro de Servidor',
+        mensagem: 'Ocorreu um erro ao inserir o usuário.',
+      });
+    }
+
+    // * inserindo o usuário
+    try {
+      const connection2 = await mysql.createConnection(dbConfig);
+      await connection2.query('UPDATE user SET ? WHERE id = ?', [user, req.userId]);
+      await connection2.end();
+
+      return res.status(200).send({
+        status: 'ok',
+        mensagem: 'Usuário alterado com sucesso.',
       });
     } catch (err) {
       tratamentoErros(req, res, err);
@@ -184,7 +279,7 @@ exports.autenticacao = async (req, res) => {
           });
         }
 
-        const token = jwt.sign({ user: rows[0].id, email: rows[0].email }, process.env.SECRET, {
+        const token = jwt.sign({ user: rows[0].id, email: rows[0].email, nome: rows[0].nome }, process.env.SECRET, {
           expiresIn: 86400, // 24 horas
         });
 
@@ -524,6 +619,59 @@ exports.resetarSenha = async (req, res) => {
       status: 'erro',
       tipo: 'Erro de Servidor',
       mensagem: 'Erro ao resetar a senha.',
+    });
+  }
+};
+
+exports.editarSenha = async (req, res) => {
+  try {
+    const user = req.body;
+
+    if (user.password === undefined) {
+      return res.status(400).send({
+        status: 'erro',
+        tipo: 'Falha na Chamada',
+        mensagem: 'Requisição inválida.',
+      });
+    }
+
+    if (user.password.trim().length < 6) {
+      return res.status(400).send({
+        status: 'erro',
+        tipo: 'Validação',
+        mensagem: 'A senha precisa conter ao menos 6 caracteres.',
+      });
+    }
+
+    const password = await bcrypt.hash(user.password, 10);
+
+    const connection2 = await mysql.createConnection(dbConfig);
+    const [result] = await connection2.query('UPDATE user SET password = ? WHERE id = ?', [
+      password,
+      req.userId,
+    ]);
+    await connection2.end();
+
+    if (result.affectedRows === 1) {
+      await transporter.sendMail({
+        from: '"Rocket Sales" <rocket-sales@amaro.com.br>',
+        to: req.userEmail,
+        subject: 'Redefinição de Senha',
+        template: 'AlteracaoSenha',
+        context: { nome: req.userNome },
+      });
+
+      return res.status(200).send({
+        status: 'ok',
+        mensagem: 'Senha alterada com sucesso.',
+      });
+    }
+  } catch (err) {
+    tratamentoErros(req, res, err);
+    return res.status(400).send({
+      status: 'erro',
+      tipo: 'Erro de Servidor',
+      mensagem: 'Erro ao alterar a senha.',
     });
   }
 };

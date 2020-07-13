@@ -1,12 +1,15 @@
 const express = require('express');
-const { auth, authDealer } = require('../util/auth');
+const { auth, authDealer, authAdmin } = require('../util/auth');
 const controller = require('../controllers/dealerController');
 
 const router = express.Router();
 
 router.post('/cadastro', auth, controller.cadastro);
 router.get('/listar', auth, controller.listar);
+
 router.post('/definirPrincipal', auth, authDealer, controller.definirPrincipal);
-router.post('/convidarUsuario', auth, authDealer, controller.convidarUsuario);
+
+router.post('/convidarUsuario', auth, authDealer, authAdmin, controller.convidarUsuario);
+router.get('/listarConvites', auth, authDealer, authAdmin, controller.listarConvites);
 
 module.exports = router;

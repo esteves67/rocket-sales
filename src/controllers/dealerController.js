@@ -245,3 +245,30 @@ exports.convidarUsuario = async (req, res) => {
     });
   }
 };
+
+exports.listarConvites = async (req, res) => {
+  const { dealer } = req.body;
+
+  try {
+    const connection = await mysql.createConnection(dbConfig);
+    const [
+      convites,
+    ] = await connection.query(
+      'SELECT dealerconvites.id, user.nome as convidante, dealerconvites.email, dealerconvites.createdAt as ConvidadoEm, dealerconvites.aceitoEm as ConviteAceitoEm FROM dealerconvites inner join user on dealerconvites.convidante = user.id where dealer = ?',
+      dealer
+    );
+    await connection.end();
+
+    return res.status(200).send({
+      status: 'ok',
+      convites,
+    });
+  } catch (err) {
+    tratamentoErros(req, res, err);
+    return res.status(400).send({
+      status: 'erro',
+      tipo: 'Erro de Servidor',
+      mensagem: 'Ocorreu um erro ao listar os convites.',
+    });
+  }
+};
