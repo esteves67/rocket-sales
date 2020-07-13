@@ -108,9 +108,13 @@ exports.cadastro = async (req, res) => {
       );
       await connection3.end();
 
-      const token = jwt.sign({ user: rows[0].id, email: rows[0].email, nome: rows[0].nome }, process.env.SECRET, {
-        expiresIn: 86400, // 24 horas
-      });
+      const token = jwt.sign(
+        { user: rows[0].id, email: rows[0].email, nome: rows[0].nome },
+        process.env.SECRET,
+        {
+          expiresIn: 86400, // 24 horas
+        }
+      );
 
       await transporter.sendMail({
         from: '"Rocket Sales" <rocket-sales@amaro.com.br>',
@@ -185,26 +189,28 @@ exports.editar = async (req, res) => {
       });
     }
 
-    // * verifica se o usuário já existe.
-    try {
-      const connection = await mysql.createConnection(dbConfig);
-      const [rows] = await connection.execute('SELECT * FROM user WHERE email = ?', [user.email]);
-      await connection.end();
+    if (user.email !== req.userEmail) {
+      // * verifica se o usuário já existe.
+      try {
+        const connection = await mysql.createConnection(dbConfig);
+        const [rows] = await connection.execute('SELECT * FROM user WHERE email = ?', [user.email]);
+        await connection.end();
 
-      if (rows.length === 1) {
+        if (rows.length === 1) {
+          return res.status(400).send({
+            status: 'erro',
+            tipo: 'Validação',
+            mensagem: 'Essa conta de e-mail já está sendo utilizada.',
+          });
+        }
+      } catch (err) {
+        tratamentoErros(req, res, err);
         return res.status(400).send({
           status: 'erro',
-          tipo: 'Validação',
-          mensagem: 'Essa conta de e-mail já está sendo utilizada.',
+          tipo: 'Erro de Servidor',
+          mensagem: 'Ocorreu um erro ao alterar os dados.',
         });
       }
-    } catch (err) {
-      tratamentoErros(req, res, err);
-      return res.status(400).send({
-        status: 'erro',
-        tipo: 'Erro de Servidor',
-        mensagem: 'Ocorreu um erro ao inserir o usuário.',
-      });
     }
 
     // * inserindo o usuário
@@ -213,9 +219,22 @@ exports.editar = async (req, res) => {
       await connection2.query('UPDATE user SET ? WHERE id = ?', [user, req.userId]);
       await connection2.end();
 
+      const connection = await mysql.createConnection(dbConfig);
+      const [rows] = await connection.query('SELECT * FROM user WHERE id = ?', req.userId);
+      await connection.end();
+
+      const token = jwt.sign(
+        { user: rows[0].id, email: rows[0].email, nome: rows[0].nome },
+        process.env.SECRET,
+        {
+          expiresIn: 86400, // 24 horas
+        }
+      );
+
       return res.status(200).send({
         status: 'ok',
         mensagem: 'Usuário alterado com sucesso.',
+        token,
       });
     } catch (err) {
       tratamentoErros(req, res, err);
@@ -279,9 +298,13 @@ exports.autenticacao = async (req, res) => {
           });
         }
 
-        const token = jwt.sign({ user: rows[0].id, email: rows[0].email, nome: rows[0].nome }, process.env.SECRET, {
-          expiresIn: 86400, // 24 horas
-        });
+        const token = jwt.sign(
+          { user: rows[0].id, email: rows[0].email, nome: rows[0].nome },
+          process.env.SECRET,
+          {
+            expiresIn: 86400, // 24 horas
+          }
+        );
 
         const connection2 = await mysql.createConnection(dbConfig);
         const [rows2] = await connection2.query(
