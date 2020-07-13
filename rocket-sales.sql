@@ -200,6 +200,29 @@ LOCK TABLES `leads` WRITE;
 INSERT INTO `leads` VALUES (2,'Claudio Scarpa','123.123.123-77','1989-05-13','11935113700',11935113700,'devdev@amaro.com.br','Jetta','Claudio',0,'Não tinha o carro dispnível.','2020-09-07 07:42:00',NULL,NULL,NULL,'2020-07-03 08:00:00','2020-03-07 11:00:00','','Revista','2020-07-03 14:13:18','2020-07-03 14:13:18',76,1),(3,'Claudio Scarpa',NULL,NULL,'11935113700',NULL,'devdev@amaro.com.br','Jetta','Claudio',NULL,NULL,NULL,NULL,NULL,NULL,'2020-07-03 08:00:00',NULL,'','Revista','2020-07-03 14:20:20','2020-07-03 14:20:20',76,1);
 /*!40000 ALTER TABLE `leads` ENABLE KEYS */;
 UNLOCK TABLES;
+DROP TABLE IF EXISTS `logleads`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `logleads` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `acao` varchar(100) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL,
+  `user` int(11) NOT NULL,
+  `dealer` int(11) NOT NULL,
+  `lead` int(11) NOT NULL,
+  `createdAt` datetime DEFAULT CURRENT_TIMESTAMP,
+  `observacao` varchar(500) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `fk1_idx` (`dealer`),
+  KEY `fk2_idx` (`user`),
+  KEY `fk3_idx` (`lead`),
+  KEY `fk1_logleads_idx` (`dealer`),
+  KEY `fk2_logleads_idx` (`user`),
+  KEY `fk3_logleads_idx` (`lead`),
+  CONSTRAINT `fk1_logleads` FOREIGN KEY (`dealer`) REFERENCES `dealer` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
+  CONSTRAINT `fk2_logleads` FOREIGN KEY (`user`) REFERENCES `user` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
+  CONSTRAINT `fk3_logleads` FOREIGN KEY (`lead`) REFERENCES `leads` (`id`) ON DELETE RESTRICT ON UPDATE RESTRICT
+) ENGINE=InnoDB AUTO_INCREMENT=186 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
 --
 -- Table structure for table `menusmodulos`
