@@ -18,6 +18,8 @@ function auth(req, res, next) {
 
     req.userId = decoded.user;
     req.userEmail = decoded.email;
+    req.userNome = decoded.nome;
+
     next();
   });
 }
@@ -39,10 +41,20 @@ const authDealer = async (req, res, next) => {
         .status(401)
         .send({ auth: false, message: 'Usuário não tem permissão para acessar esse dealer.' });
     }
+
     req.userPermissao = user[0].permissao;
   }
 
   next();
 };
 
-module.exports = { auth, authDealer };
+const authAdmin = async (req, res, next) => {
+  if (req.userPermissao !== 4) {
+    return res
+      .status(401)
+      .send({ auth: false, message: 'Usuário não tem permissão para acessar esse recurso.' });
+  }
+  next();
+};
+
+module.exports = { auth, authDealer, authAdmin };
