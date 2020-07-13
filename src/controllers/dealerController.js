@@ -112,6 +112,99 @@ exports.cadastro = async (req, res) => {
   }
 };
 
+exports.editar = async (req, res) => {
+  try {
+    const dealer = req.body;
+
+    if (
+      dealer.dealer === undefined ||
+      dealer.nome === undefined ||
+      dealer.fabricante === undefined ||
+      dealer.plano === undefined ||
+      dealer.contaFaturamento === undefined
+    ) {
+      return res.status(400).send({
+        status: 'erro',
+        tipo: 'Falha na Chamada',
+        mensagem: 'Requisição inválida.',
+      });
+    }
+
+    if (!dealer.nome.trim()) {
+      return res.status(400).send({
+        status: 'erro',
+        tipo: 'Validação',
+        mensagem: 'O nome do dealer não foi informado.',
+      });
+    }
+
+    if (!dealer.fabricante.trim()) {
+      return res.status(400).send({
+        status: 'erro',
+        tipo: 'Validação',
+        mensagem: 'O fabricante não foi informado.',
+      });
+    }
+
+    if (dealer.plano !== 1 && dealer.contaFaturamento === null) {
+      return res.status(400).send({
+        status: 'erro',
+        tipo: 'Validação',
+        mensagem: 'A conta de faturamento não foi informada.',
+      });
+    }
+    try {
+      if (dealer.plano !== 1) {
+        const connection0 = await mysql.createConnection(dbConfig);
+        const [
+          result0,
+        ] = await connection0.query('SELECT * FROM faturamento WHERE id = ? and user = ?', [
+          dealer.contaFaturamento,
+          req.userId,
+        ]);
+        await connection0.end();
+
+        // * verifico se a conta de faturamento existe e é pertencente a esse usuário.
+        if (result0.length === 0) {
+          return res.status(400).send({
+            status: 'erro',
+            tipo: 'Validação',
+            mensagem: 'A conta de faturamento não está disponível.',
+          });
+        }
+      }
+
+      const connection = await mysql.createConnection(dbConfig);
+      const [
+        result,
+      ] = await connection.query(
+        'UPDATE dealer SET nome = ?, fabricante = ?, plano = ?, contaFaturamento = ? where id = ?',
+        [dealer.nome, dealer.fabricante, dealer.plano, dealer.contaFaturamento, dealer.id]
+      );
+      await connection.end();
+
+      return res.status(200).send({
+        status: 'ok',
+        mensagem: 'Dealer alterado com sucesso.',
+      });
+    } catch (err) {
+      tratamentoErros(req, res, err);
+      return res.status(400).send({
+        status: 'erro',
+        tipo: 'Erro de Servidor',
+        mensagem: 'Ocorreu um erro ao alterar o dealer.',
+      });
+    }
+  } catch (err) {
+    tratamentoErros(req, res, err);
+    return res.status(400).send({
+      status: 'erro',
+      tipo: 'Erro de Servidor',
+      mensagem: 'Ocorreu um erro ao alterar o dealer.',
+    });
+  }
+};
+
 exports.listar = async (req, res) => {
   try {
     const connection = await mysql.createConnection(dbConfig);
@@ -251,9 +344,7 @@ exports.listarConvites = async (req, res) => {
 
   try {
     const connection = await mysql.createConnection(dbConfig);
-    const [
-      convites,
-    ] = await connection.query(
+    const [convites] = await connection.query(
       'SELECT dealerconvites.id, user.nome as convidante, dealerconvites.email, dealerconvites.createdAt as ConvidadoEm, dealerconvites.aceitoEm as ConviteAceitoEm FROM dealerconvites inner join user on dealerconvites.convidante = user.id where dealer = ?',
       dealer
     );

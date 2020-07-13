@@ -5,6 +5,8 @@ const controller = require('../controllers/dealerController');
 const router = express.Router();
 
 router.post('/cadastro', auth, controller.cadastro);
+router.post('/editar', auth, authDealer, authAdmin, controller.editar);
+
 router.get('/listar', auth, controller.listar);
 
 router.post('/definirPrincipal', auth, authDealer, controller.definirPrincipal);
