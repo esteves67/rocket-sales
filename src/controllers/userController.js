@@ -503,7 +503,7 @@ exports.enviarEmailResetarSenha = async (req, res) => {
     );
     await connection.end();
 
-    const link = `http://${req.headers.host}/forgotPassword/verify?token=${token}`;
+    const link = `https://rocketsales.amaro.com.br/forgotPassword/verificaToken?token=${token}`;
 
     await transporter.sendMail({
       from: '"Rocket Sales" <rocket-sales@amaro.com.br>',
@@ -728,6 +728,29 @@ exports.listarVendedores = async (req, res) => {
       status: 'erro',
       tipo: 'Erro de Servidor',
       mensagem: 'Ocorreu um erro ao obter os vendedores.',
+    });
+  }
+};
+
+exports.usuario = async (req, res) => {
+  try {
+    const connection = await mysql.createConnection(dbConfig);
+    const [user] = await connection.query(
+      'SELECT id, nome, celular, email FROM user WHERE id = ?',
+      [req.userId]
+    );
+    await connection.end();
+
+    return res.status(200).send({
+      status: 'ok',
+      user,
+    });
+  } catch (err) {
+    tratamentoErros(req, res, err);
+    return res.status(400).send({
+      status: 'erro',
+      tipo: 'Erro de Servidor',
+      mensagem: 'Ocorreu um erro ao obter os dados do usuário.',
     });
   }
 };

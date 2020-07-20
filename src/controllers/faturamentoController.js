@@ -252,9 +252,10 @@ exports.listar = async (req, res) => {
     const connection = await mysql.createConnection(dbConfig);
     const [
       contas,
-    ] = await connection.query('SELECT cnpj, id, razaoSocial FROM faturamento WHERE (user = ?)', [
-      req.userId,
-    ]);
+    ] = await connection.query(
+      'SELECT id, cnpj, razaoSocial, (select GROUP_CONCAT(nome) from dealer where contaFaturamento = faturamento.id) as dealers FROM faturamento where (user = ?)',
+      [req.userId]
+    );
     await connection.end();
 
     return res.status(200).send({
@@ -267,6 +268,41 @@ exports.listar = async (req, res) => {
       status: 'erro',
       tipo: 'Erro de Servidor',
       mensagem: 'Erro ao obter os dados das contas de faturamento.',
+    });
+  }
+};
+
+exports.conta = async (req, res) => {
+  const { contaFaturamento } = req.body;
+
+  if (contaFaturamento === undefined) {
+    return res.status(400).send({
+      status: 'erro',
+      tipo: 'Falha na Chamada',
+      mensagem: 'Requisição inválida.',
+    });
+  }
+
+  try {
+    const connection = await mysql.createConnection(dbConfig);
+    const [
+      conta,
+    ] = await connection.query('SELECT * FROM faturamento WHERE (user = ?) and (id = ?)', [
+      req.userId,
+      contaFaturamento,
+    ]);
+    await connection.end();
+
+    return res.status(200).send({
+      status: 'ok',
+      conta,
+    });
+  } catch (err) {
+    tratamentoErros(req, res, err);
+    return res.status(400).send({
+      status: 'erro',
+      tipo: 'Erro de Servidor',
+      mensagem: 'Erro ao obter os dados da conta de faturamento.',
     });
   }
 };

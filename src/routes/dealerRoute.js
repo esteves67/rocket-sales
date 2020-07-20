@@ -9,6 +9,8 @@ router.post('/editar', auth, authDealer, authAdmin, controller.editar);
 
 router.get('/listar', auth, controller.listar);
 
+router.get('/dealer', auth, authDealer, controller.dealer);
+
 router.post('/definirPrincipal', auth, authDealer, controller.definirPrincipal);
 
 router.post('/convidarUsuario', auth, authDealer, authAdmin, controller.convidarUsuario);

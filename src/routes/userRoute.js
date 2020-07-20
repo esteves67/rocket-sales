@@ -6,6 +6,8 @@ const router = express.Router();
 
 router.get('/autenticacao', controller.autenticacao);
 
+router.get('/usuario', auth, controller.usuario);
+
 router.post('/cadastro', controller.cadastro);
 router.post('/editar', auth, controller.editar);
 router.post('/editarSenha', auth, controller.editarSenha);

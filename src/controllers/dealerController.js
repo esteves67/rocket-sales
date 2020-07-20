@@ -211,7 +211,7 @@ exports.listar = async (req, res) => {
     const [
       dealers,
     ] = await connection.query(
-      'SELECT dealer.id, dealer.nome FROM dealerUsers INNER JOIN dealer ON dealerUsers.dealer = dealer.id WHERE user = ?',
+      'SELECT dealer.id, dealer.nome, fabricante, permissoes.nome permissao FROM dealerUsers INNER JOIN dealer ON dealerUsers.dealer = dealer.id INNER JOIN permissoes on dealerusers.permissao = permissoes.id WHERE user = ?',
       [req.userId]
     );
     await connection.end();
@@ -360,6 +360,31 @@ exports.listarConvites = async (req, res) => {
       status: 'erro',
       tipo: 'Erro de Servidor',
       mensagem: 'Ocorreu um erro ao listar os convites.',
+    });
+  }
+};
+
+exports.dealer = async (req, res) => {
+  const { dealer } = req.body;
+
+  try {
+    const connection = await mysql.createConnection(dbConfig);
+    const [loja] = await connection.query(
+      'SELECT nome, fabricante, contaFaturamento, plano FROM dealer where id = ?',
+      dealer
+    );
+    await connection.end();
+
+    return res.status(200).send({
+      status: 'ok',
+      loja,
+    });
+  } catch (err) {
+    tratamentoErros(req, res, err);
+    return res.status(400).send({
+      status: 'erro',
+      tipo: 'Erro de Servidor',
+      mensagem: 'Ocorreu um erro ao obter os dados da loja.',
     });
   }
 };
