@@ -4,7 +4,7 @@ USE `rocket-sales`;
 --
 -- Host: localhost    Database: rocket-sales
 -- ------------------------------------------------------
--- Server version	8.0.20
+-- Server version	8.0.13
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
