@@ -179,7 +179,7 @@ exports.editar = async (req, res) => {
         result,
       ] = await connection.query(
         'UPDATE dealer SET nome = ?, fabricante = ?, plano = ?, contaFaturamento = ? where id = ?',
-        [dealer.nome, dealer.fabricante, dealer.plano, dealer.contaFaturamento, dealer.id]
+        [dealer.nome, dealer.fabricante, dealer.plano, dealer.contaFaturamento, dealer.dealer]
       );
       await connection.end();
 
