@@ -211,7 +211,7 @@ exports.listar = async (req, res) => {
     const [
       dealers,
     ] = await connection.query(
-      'SELECT dealer.id, dealer.nome, fabricante, permissoes.nome permissao FROM dealerUsers INNER JOIN dealer ON dealerUsers.dealer = dealer.id INNER JOIN permissoes on dealerusers.permissao = permissoes.id WHERE user = ?',
+      'SELECT dealer.id, dealer.nome, fabricante, permissoes.nome permissao, principal FROM dealerUsers INNER JOIN dealer ON dealerUsers.dealer = dealer.id INNER JOIN permissoes on dealerusers.permissao = permissoes.id WHERE user = ?',
       [req.userId]
     );
     await connection.end();
