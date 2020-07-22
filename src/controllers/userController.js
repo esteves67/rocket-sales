@@ -323,12 +323,20 @@ exports.autenticacao = async (req, res) => {
           };
         }
 
+        const connection3 = await mysql.createConnection(dbConfig);
+        const [rows3] = await connection3.query(
+          'SELECT * FROM dealerConvites WHERE email = ?',
+          rows[0].email
+        );
+        await connection3.end();
+
         return res.status(200).send({
           status: 'ok',
           mensagem: 'Login realizado com sucesso.',
           nome: rows[0].nome,
           dealerAtivo,
           token,
+          qtdeConvites: rows3.length,
         });
       }
 
