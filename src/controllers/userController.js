@@ -308,7 +308,7 @@ exports.autenticacao = async (req, res) => {
 
         const connection2 = await mysql.createConnection(dbConfig);
         const [rows2] = await connection2.query(
-          'SELECT dealer.nome, dealer, permissao FROM dealerUsers INNER JOIN dealer on dealerUsers.dealer = dealer.id WHERE user = ? ORDER BY principal DESC',
+          'SELECT dealer.nome, dealer.plano, dealer.fabricante, dealer, permissao FROM dealerUsers INNER JOIN dealer on dealerUsers.dealer = dealer.id WHERE user = ? ORDER BY principal DESC',
           rows[0].id
         );
         await connection2.end();
@@ -319,6 +319,8 @@ exports.autenticacao = async (req, res) => {
           dealerAtivo = {
             dealer: rows2[0].dealer,
             dealerNome: rows2[0].nome,
+            dealerPlano: rows2[0].plano,
+            dealerFabricante: rows2[0].fabricante,
             permissao: rows2[0].permissao,
           };
         }
@@ -433,7 +435,7 @@ exports.aceitarConvite = async (req, res) => {
       await connection2.end();
 
       const connection3 = await mysql.createConnection(dbConfig);
-      const [rows3] = await connection3.query('SELECT nome FROM dealer WHERE (id = ?)', [
+      const [rows3] = await connection3.query('SELECT nome, fabricante, plano FROM dealer WHERE (id = ?)', [
         rows[0].dealer,
       ]);
       await connection3.end();
@@ -444,6 +446,8 @@ exports.aceitarConvite = async (req, res) => {
         dealerAtivo: {
           dealer: rows[0].dealer,
           dealerNome: rows3[0].nome,
+          dealerPlano: rows3[0].plano,
+          dealerFabricante: rows3[0].fabricante,
           permissao: rows[0].permissao,
         },
       });

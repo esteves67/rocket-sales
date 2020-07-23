@@ -375,6 +375,8 @@ exports.dealer = async (req, res) => {
     );
     await connection.end();
 
+    loja[0].permissao = req.userPermissao;
+
     return res.status(200).send({
       status: 'ok',
       loja,
