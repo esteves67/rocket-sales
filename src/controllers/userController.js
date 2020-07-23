@@ -325,7 +325,7 @@ exports.autenticacao = async (req, res) => {
 
         const connection3 = await mysql.createConnection(dbConfig);
         const [rows3] = await connection3.query(
-          'SELECT * FROM dealerConvites WHERE email = ?',
+          'SELECT * FROM dealerConvites WHERE email = ? and aceitoEm is null',
           rows[0].email
         );
         await connection3.end();
