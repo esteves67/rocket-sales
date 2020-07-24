@@ -1,6 +1,6 @@
 const express = require('express');
 const controller = require('../controllers/userController');
-const { auth } = require('../util/auth');
+const { auth, authDealer, authAdmin } = require('../util/auth');
 
 const router = express.Router();
 
@@ -11,6 +11,7 @@ router.get('/usuario', auth, controller.usuario);
 router.post('/cadastro', controller.cadastro);
 router.post('/editar', auth, controller.editar);
 router.post('/editarSenha', auth, controller.editarSenha);
+router.post('/alterarPermissao', auth, authDealer, authAdmin, controller.alterarPermissao);
 
 router.get('/convites', auth, controller.listarConvites);
 router.post('/convite', auth, controller.aceitarConvite);

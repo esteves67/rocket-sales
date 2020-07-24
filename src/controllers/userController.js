@@ -435,7 +435,9 @@ exports.aceitarConvite = async (req, res) => {
       await connection2.end();
 
       const connection3 = await mysql.createConnection(dbConfig);
-      const [rows3] = await connection3.query('SELECT nome, fabricante, plano FROM dealer WHERE (id = ?)', [
+      const [
+        rows3,
+      ] = await connection3.query('SELECT nome, fabricante, plano FROM dealer WHERE (id = ?)', [
         rows[0].dealer,
       ]);
       await connection3.end();
@@ -763,6 +765,40 @@ exports.usuario = async (req, res) => {
       status: 'erro',
       tipo: 'Erro de Servidor',
       mensagem: 'Ocorreu um erro ao obter os dados do usuário.',
+    });
+  }
+};
+
+exports.alterarPermissao = async (req, res) => {
+  try {
+    const { dealer, user, permissao } = req.body;
+
+    if (dealer === undefined || user === undefined || permissao === undefined) {
+      return res.status(400).send({
+        status: 'erro',
+        tipo: 'Falha na Chamada',
+        mensagem: 'Requisição inválida.',
+      });
+    }
+
+    const connection = await mysql.createConnection(dbConfig);
+    await connection.query('UPDATE dealerUsers SET permissao =  ? WHERE dealer = ? and user = ?', [
+      permissao,
+      dealer,
+      user,
+    ]);
+    await connection.end();
+
+    return res.status(200).send({
+      status: 'ok',
+      mensagem: 'Permissão alterada com sucesso!'
+    });
+  } catch (err) {
+    tratamentoErros(req, res, err);
+    return res.status(400).send({
+      status: 'erro',
+      tipo: 'Erro de Servidor',
+      mensagem: 'Ocorreu um erro ao alterar a permissão do usuário.',
     });
   }
 };
