@@ -727,7 +727,7 @@ exports.listarVendedores = async (req, res) => {
   try {
     const connection = await mysql.createConnection(dbConfig);
     const [vendedores] = await connection.query(
-      'SELECT user.id, nome FROM user inner join dealerusers on dealerusers.user = user.id WHERE dealer = ?',
+      'SELECT user.id, nome, email, permissao FROM user inner join dealerusers on dealerusers.user = user.id WHERE dealer = ?',
       dealer
     );
     await connection.end();
