@@ -30,10 +30,10 @@ const authDealer = async (req, res, next) => {
     const connection0 = await mysql.createConnection(dbConfig);
     const [
       user,
-    ] = await connection0.query('SELECT * FROM dealerUsers WHERE dealer = ? and user = ?', [
-      req.body.dealer,
-      req.userId,
-    ]);
+    ] = await connection0.query(
+      'SELECT * FROM dealerUsers inner join permissoes on permissoes.id = dealerUsers.permissao WHERE dealer = ? and user = ?',
+      [req.body.dealer, req.userId]
+    );
     await connection0.end();
 
     if (user.length === 0) {
@@ -43,6 +43,10 @@ const authDealer = async (req, res, next) => {
     }
 
     req.userPermissao = user[0].permissao;
+    req.allow = {};
+    req.allow.ConvidarUsuarios = user[0].allow_ConvidarUsuarios;
+    req.allow.AlterarDadosLoja = user[0].allow_AlterarDadosLoja;
+    req.allow.AlterarPermissaoUsuarios = user[0].allow_AlterarPermissaoUsuarios;
   }
 
   next();
@@ -57,4 +61,13 @@ const authAdmin = async (req, res, next) => {
   next();
 };
 
-module.exports = { auth, authDealer, authAdmin };
+const authPermissao = (permissao) => (req, res, next) => {
+  if (req.allow[permissao] !== 1) {
+    return res
+      .status(401)
+      .send({ auth: false, message: 'Usuário não tem permissão para acessar esse recurso.' });
+  }
+  next();
+};
+
+module.exports = { auth, authDealer, authAdmin, authPermissao };

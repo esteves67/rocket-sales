@@ -38,7 +38,7 @@ exports.listarModulos = async (req, res) => {
     return res.status(400).send({
       status: 'erro',
       tipo: 'Erro de Servidor',
-      mensagem: 'Erro ao obter os dados das contas de faturamento.',
+      mensagem: 'Erro ao obter os dados dos módulos liberados.',
     });
   }
 };
@@ -73,7 +73,7 @@ exports.listarMenus = async (req, res) => {
     return res.status(400).send({
       status: 'erro',
       tipo: 'Erro de Servidor',
-      mensagem: 'Erro ao obter os dados das contas de faturamento.',
+      mensagem: 'Erro ao obter os dados dos módulos liberados.',
     });
   }
 };

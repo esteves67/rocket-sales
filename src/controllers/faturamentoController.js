@@ -211,7 +211,7 @@ exports.editar = async (req, res) => {
       const [
         result,
       ] = await connection.query(
-        'UPDATE faturamento SET cnpj = ?, inscricaoEstadual = ?, razaoSocial = ?, endereco = ?, cidade = ?, estado = ?, cep = ? WHERE id = ?',
+        'UPDATE faturamento SET cnpj = ?, inscricaoEstadual = ?, razaoSocial = ?, endereco = ?, cidade = ?, estado = ?, cep = ? WHERE id = ? and user = ?',
         [
           faturamento.cnpj,
           faturamento.inscricaoEstadual,
@@ -221,6 +221,7 @@ exports.editar = async (req, res) => {
           faturamento.estado,
           faturamento.cep,
           faturamento.id,
+          req.userId
         ]
       );
       await connection.end();
