@@ -85,13 +85,20 @@ exports.cadastro = async (req, res) => {
       );
       await connection2.end();
 
+      const connection3 = await mysql.createConnection(dbConfig);
+      const [permissoes] = await connection3.query('SELECT * from permissoes where id = ?', [4]);
+      await connection3.end();
+
       return res.status(200).send({
         status: 'ok',
         mensagem: 'Dealer incluído com sucesso.',
         dealerAtivo: {
           dealer: result.insertId,
           dealerNome: dealer.nome,
+          dealerPlano: dealer.plano,
+          dealerFabricante: dealer.fabricante,
           permissao: 4,
+          permissoes,
         },
       });
     } catch (err) {

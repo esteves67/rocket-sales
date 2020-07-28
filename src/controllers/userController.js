@@ -313,6 +313,13 @@ exports.autenticacao = async (req, res) => {
         );
         await connection2.end();
 
+        const connection0 = await mysql.createConnection(dbConfig);
+        const [permissoes] = await connection0.query(
+          'SELECT * from permissoes where id = ?',
+          rows2[0].permissao
+        );
+        await connection0.end();
+
         let dealerAtivo = null;
 
         if (rows2.length > 0) {
@@ -322,6 +329,7 @@ exports.autenticacao = async (req, res) => {
             dealerPlano: rows2[0].plano,
             dealerFabricante: rows2[0].fabricante,
             permissao: rows2[0].permissao,
+            permissoes,
           };
         }
 
@@ -336,9 +344,9 @@ exports.autenticacao = async (req, res) => {
           status: 'ok',
           mensagem: 'Login realizado com sucesso.',
           nome: rows[0].nome,
-          dealerAtivo,
-          token,
           qtdeConvites: rows3.length,
+          token,
+          dealerAtivo,
         });
       }
 
@@ -442,6 +450,12 @@ exports.aceitarConvite = async (req, res) => {
       ]);
       await connection3.end();
 
+      const connection4 = await mysql.createConnection(dbConfig);
+      const [permissoes] = await connection4.query('SELECT * FROM permissoes WHERE id = ?', [
+        rows[0].permissao,
+      ]);
+      await connection4.end();
+
       return res.status(200).send({
         status: 'ok',
         mensagem: 'Convite aceito com sucesso.',
@@ -451,6 +465,7 @@ exports.aceitarConvite = async (req, res) => {
           dealerPlano: rows3[0].plano,
           dealerFabricante: rows3[0].fabricante,
           permissao: rows[0].permissao,
+          permissoes,
         },
       });
     } catch (err) {
@@ -791,7 +806,7 @@ exports.alterarPermissao = async (req, res) => {
 
     return res.status(200).send({
       status: 'ok',
-      mensagem: 'Permissão alterada com sucesso!'
+      mensagem: 'Permissão alterada com sucesso!',
     });
   } catch (err) {
     tratamentoErros(req, res, err);
