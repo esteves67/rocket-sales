@@ -313,16 +313,16 @@ exports.autenticacao = async (req, res) => {
         );
         await connection2.end();
 
-        const connection0 = await mysql.createConnection(dbConfig);
-        const [permissoes] = await connection0.query(
-          'SELECT * from permissoes where id = ?',
-          rows2[0].permissao
-        );
-        await connection0.end();
-
         let dealerAtivo = null;
 
         if (rows2.length > 0) {
+          const connection0 = await mysql.createConnection(dbConfig);
+          const [permissoes] = await connection0.query(
+            'SELECT * from permissoes where id = ?',
+            rows2[0].permissao
+          );
+          await connection0.end();
+
           dealerAtivo = {
             dealer: rows2[0].dealer,
             dealerNome: rows2[0].nome,
