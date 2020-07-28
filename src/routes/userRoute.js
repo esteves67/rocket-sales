@@ -11,7 +11,7 @@ router.get('/usuario', auth, controller.usuario);
 router.post('/cadastro', controller.cadastro);
 router.post('/editar', auth, controller.editar);
 router.post('/editarSenha', auth, controller.editarSenha);
-router.post('/alterarPermissao', auth, authDealer, authPermissao('alterarPermissao'), controller.alterarPermissao);
+router.post('/alterarPermissao', auth, authDealer, authPermissao('AlterarPermissao'), controller.alterarPermissao);
 
 router.get('/convites', auth, controller.listarConvites);
 router.post('/convite', auth, controller.aceitarConvite);
