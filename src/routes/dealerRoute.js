@@ -13,7 +13,7 @@ router.get('/dealer', auth, authDealer, controller.dealer);
 
 router.post('/definirPrincipal', auth, authDealer, controller.definirPrincipal);
 
-router.post('/convidarUsuario', auth, authDealer, authPermissao('convidarUsuarios'), controller.convidarUsuario);
-router.get('/listarConvites', auth, authDealer, authPermissao('convidarUsuarios'), controller.listarConvites);
+router.post('/convidarUsuario', auth, authDealer, authPermissao('ConvidarUsuarios'), controller.convidarUsuario);
+router.get('/listarConvites', auth, authDealer, authPermissao('ConvidarUsuarios'), controller.listarConvites);
 
 module.exports = router;
