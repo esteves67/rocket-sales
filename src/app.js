@@ -17,5 +17,8 @@ app.use('/dealer', require('./routes/dealerRoute'));
 app.use('/faturamento', require('./routes/faturamentoRoute'));
 app.use('/menu', require('./routes/menuRoute'));
 app.use('/showroom', require('./routes/showroomRoute'));
+app.post('/sns', async (req, res) => {
+  console.log(req.body)
+})
 
 module.exports = app;
