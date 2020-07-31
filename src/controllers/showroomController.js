@@ -458,7 +458,7 @@ exports.listar = async (req, res) => {
     const [
       leads,
     ] = await connection.query(
-      `SELECT  leads.id, leads.nome, user.nome as vendedor, veiculoInteresse, DateTimeFormatPtBr(horaEntrada) as horaEntrada, DateTimeFormatPtBr(horaSaida) as horaSaida FROM leads INNER JOIN user ON leads.vendedor = user.id WHERE dealer = ? and DATE(horaEntrada) BETWEEN ? AND ? ${SQLnaLoja}`,
+      `SELECT leads.id, origem, leads.nome, user.nome as vendedor, veiculoInteresse, DateTimeFormatPtBr(horaEntrada) as horaEntrada, DateTimeFormatPtBr(horaSaida) as horaSaida, statusnegociacao, numeropedido, motivodesistencia, testdrive, testdrivemotivo, testdrivehora FROM leads INNER JOIN user ON leads.vendedor = user.id WHERE dealer = ? and DATE(horaEntrada) BETWEEN ? AND ? ${SQLnaLoja}`,
       [dealer, dataInicial1, dataFinal1]
     );
     await connection.end();
@@ -560,7 +560,7 @@ exports.selecionarLead = async (req, res) => {
     const [
       dadoslead,
     ] = await connection.query(
-      'SELECT  leads.nome,  cpf, leads.dataNascimento, leads.telefone1, leads.telefone2, leads.email, veiculoInteresse, user.id as vendedor,  leads.comoconheceu, leads.observacao, leads.horaEntrada FROM leads INNER JOIN user ON user.id = leads.vendedor WHERE leads.dealer = ? And leads.id = ? ',
+      'SELECT  leads.nome, origem, cpf, leads.dataNascimento, leads.telefone1, leads.telefone2, leads.email, veiculoInteresse, user.id as vendedor,  leads.comoconheceu, leads.observacao, leads.horaEntrada FROM leads INNER JOIN user ON user.id = leads.vendedor WHERE leads.dealer = ? And leads.id = ? ',
       [dealer, lead]
     );
     await connection.end();
@@ -595,7 +595,7 @@ exports.listarLog = async (req, res) => {
     const [
       logLeads,
     ] = await connection.query(
-      'SELECT acao, user.nome as criadopor, DATE_FORMAT(logleads.createdAt, "%d/%m/%Y %H:%i:%s") as criadoem,observacao FROM `rocket-sales`.logleads INNER JOIN user ON logleads.user = user.id WHERE (logleads.lead = ?) AND (logleads.dealer = ?) ORDER BY logleads.createdAt DESC',
+      'SELECT acao, user.nome as criadopor, DATE_FORMAT(logleads.createdAt, "%d/%m/%Y %H:%i:%s") as criadoem,observacao FROM logleads INNER JOIN user ON logleads.user = user.id WHERE (logleads.lead = ?) AND (logleads.dealer = ?) ORDER BY logleads.createdAt DESC',
       [lead, dealer]
     );
     await connection.end();
