@@ -51,7 +51,7 @@ exports.listarMensagens = async (idRocketLead) => {
     const [
       resultEm,
     ] = await connection.query(
-      `SELECT id, remetente, html mensagem, data, 'email' tipo, direcao FROM emails WHERE (remetente = ?) or (email = ?) order by id limit 2`,
+      `SELECT id, remetente, html mensagem, data, 'email' tipo, direcao FROM emails WHERE (remetente = ?) or (email = ?)`,
       [result1[0].email, result1[0].email]
     );
     await connection.end();
@@ -71,7 +71,7 @@ exports.listarMensagens = async (idRocketLead) => {
     resultEm.push(...resultWp.recordset);
 
     const result = resultEm.sort((a, b) => {
-      return new Date(b.id) - new Date(a.id);
+      return new Date(a.id) - new Date(b.id);
     });
 
     return { status: 'ok', result };
@@ -124,7 +124,7 @@ exports.email = async (
 
     const connection3 = await mysql.createConnection(dbConfig);
     await connection3.query(
-      'INSERT INTO emails (remetente, email, html, idlead, assunto, messageId, direcao) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO emails (remetente, email, html, idlead, assunto, messageId, direcao, data) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())',
       [remetente, destinatario, html, lead, assunto, result.messageId, 'out']
     );
     await connection3.end();
