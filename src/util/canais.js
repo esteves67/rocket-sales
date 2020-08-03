@@ -1,11 +1,19 @@
 const sql = require('mssql');
-// const transporter = require('nodemailer');
+const mysql = require('mysql2');
+const transporter = require('nodemailer');
 
 const config = {
-  user: 'rocketsales',
-  password: 'TWV#!zd87S9X_-;V$#vsfqQR4',
-  server: 'SERVER01',
-  database: 'DBASE',
+  user: process.env.SQL_DB_USER,
+  password: process.env.SQL_DB_PASS,
+  server: process.env.SQL_DB_HOST,
+  database: process.env.SQL_DB_NAME,
+};
+
+const dbConfig = {
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASS,
+  database: process.env.DB_NAME,
 };
 
 exports.whatsApp = async (remetente, telefone, mensagem, codEmpresa, idRocketLead) => {
@@ -44,16 +52,32 @@ exports.listarWhatsApp = async (idRocketLead) => {
   }
 };
 
-// exports.email = async (remetente, destinatario, assunto, mensagem, codEmpresa, idRocketLead) => {
-//   await transporter.sendMail({
-//     from: remetente,
-//     to: destinatario,
-//     subject: assunto,
-//     html: mensagem,
-//     // template: mensagem,
-//     // context: {
-//     //   link,
-//     //   nome: rows[0].nome,
-//     // },
-//   });
-// };
+exports.email = async (
+  remetente,
+  destinatario,
+  destinataiocc,
+  destinatariocco,
+  assunto,
+  html,
+  lead
+) => {
+  try {
+    const connection3 = await mysql.createConnection(dbConfig);
+    await connection3.query(
+      'INSERT INTO emails (remetente, email, html, idlead) VALUES (?, ?, ?, ?)',
+      [remetente, destinatario, html, lead]
+    );
+    await connection3.end();
+
+    await transporter.sendMail({
+      from: remetente,
+      to: destinatario,
+      subject: assunto,
+      html,
+    });
+
+    return { status: 'enviado' };
+  } catch (err) {
+    return { status: 'erro', err };
+  }
+};
