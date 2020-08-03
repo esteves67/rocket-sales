@@ -22,7 +22,7 @@ exports.enviarWhatsApp = async (req, res) => {
 
 exports.listarMensagens = async (req, res) => {
   try {
-    const status = await canais.listarWhatsApp(req.body.lead);
+    const status = await canais.listarMensagens(req.body.lead);
 
     return res.status(200).send({
       status,
@@ -36,7 +36,7 @@ exports.listarMensagens = async (req, res) => {
 
 exports.enviarEmail = async (req, res) => {
   try {
-    const status = await canais.enviarEmail(
+    const status = await canais.email(
       'spjapan@amaro.com.br',
       req.body.destinatario,
       null,

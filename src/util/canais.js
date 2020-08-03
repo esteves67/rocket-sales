@@ -1,6 +1,6 @@
 const sql = require('mssql');
-const mysql = require('mysql2');
-const transporter = require('nodemailer');
+const mysql = require('mysql2/promise');
+const transporter = require('./nodemailer');
 
 const config = {
   user: process.env.SQL_DB_USER,
@@ -37,14 +37,42 @@ exports.whatsApp = async (remetente, telefone, mensagem, codEmpresa, idRocketLea
   }
 };
 
-exports.listarWhatsApp = async (idRocketLead) => {
+exports.listarMensagens = async (idRocketLead) => {
   try {
+    const connection1 = await mysql.createConnection(dbConfig);
+    const [
+      result1,
+    ] = await connection1.query('SELECT telefone1, telefone2, email FROM leads where (id = ?)', [
+      idRocketLead,
+    ]);
+    await connection1.end();
+
+    const connection = await mysql.createConnection(dbConfig);
+    const [
+      resultEm,
+    ] = await connection.query(
+      `SELECT id, remetente, html mensagem, data, 'email' tipo FROM emails WHERE (remetente = ?) or (email = ?) order by id limit 2`,
+      [result1[0].email, result1[0].email]
+    );
+    await connection.end();
+
     const pool = await sql.connect(config);
 
-    const result = await pool
+    const resultWp = await pool
       .request()
-      .input('idRocketSales', sql.BigInt, idRocketLead)
-      .query('SELECT * FROM WHATSAPP.MENSAGENS WHERE (IDROCKETLEAD = @idRocketSales)');
+      .input('remetente', sql.BigInt, '55' + result1[0].telefone1.replace(/\D/g, ''))
+      .input('destinatario', sql.BigInt, '55' + result1[0].telefone1.replace(/\D/g, ''))
+      .input('remetente2', sql.BigInt, '55' + result1[0].telefone2.replace(/\D/g, ''))
+      .input('destinatario2', sql.BigInt, '55' + result1[0].telefone2.replace(/\D/g, ''))
+      .query(
+        `SELECT id, remetente, mensagem, data, 'whatsapp' tipo FROM WHATSAPP.MENSAGENS where remetente = @remetente or telefone = @destinatario or  remetente = @remetente2 or telefone = @destinatario2`
+      );
+
+    resultEm.push(...resultWp.recordset);
+
+    const result = resultEm.sort((a, b) => {
+      return new Date(b.id) - new Date(a.id);
+    });
 
     return { status: 'ok', result };
   } catch (err) {
@@ -62,19 +90,19 @@ exports.email = async (
   lead
 ) => {
   try {
-    const connection3 = await mysql.createConnection(dbConfig);
-    await connection3.query(
-      'INSERT INTO emails (remetente, email, html, idlead) VALUES (?, ?, ?, ?)',
-      [remetente, destinatario, html, lead]
-    );
-    await connection3.end();
-
-    await transporter.sendMail({
+    const result = await transporter.sendMail({
       from: remetente,
       to: destinatario,
       subject: assunto,
       html,
     });
+
+    const connection3 = await mysql.createConnection(dbConfig);
+    await connection3.query(
+      'INSERT INTO emails (remetente, email, html, idlead, assunto, messageId) VALUES (?, ?, ?, ?, ?, ?)',
+      [remetente, destinatario, html, lead, assunto, result.messageId]
+    );
+    await connection3.end();
 
     return { status: 'enviado' };
   } catch (err) {
