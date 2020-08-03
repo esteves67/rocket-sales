@@ -20,7 +20,7 @@ exports.enviarWhatsApp = async (req, res) => {
   }
 };
 
-exports.listarWhatsApp = async (req, res) => {
+exports.listarMensagens = async (req, res) => {
   try {
     const status = await canais.listarWhatsApp(req.body.lead);
 
