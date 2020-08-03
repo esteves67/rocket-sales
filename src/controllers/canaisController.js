@@ -51,7 +51,7 @@ exports.listarCanais = async (req, res) => {
 exports.enviarEmail = async (req, res) => {
   try {
     const status = await canais.email(
-      'spjapan@amaro.com.br',
+      'spjapan@rocketsales.amaro.com.br',
       req.body.destinatario,
       null,
       null,

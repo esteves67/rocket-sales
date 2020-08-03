@@ -458,7 +458,7 @@ exports.listar = async (req, res) => {
     const [
       leads,
     ] = await connection.query(
-      `SELECT leads.id, origem, leads.nome, user.nome as vendedor, veiculoInteresse, DateTimeFormatPtBr(horaEntrada) as horaEntrada, DateTimeFormatPtBr(horaSaida) as horaSaida, statusnegociacao, numeropedido, motivodesistencia, testdrive, testdrivemotivo, testdrivehora FROM leads INNER JOIN user ON leads.vendedor = user.id WHERE dealer = ? and DATE(horaEntrada) BETWEEN ? AND ? ${SQLnaLoja}`,
+      `SELECT leads.id, origem, leads.nome, user.nome as vendedor, veiculoInteresse, DateTimeFormatPtBr(horaEntrada) as horaEntrada, DateTimeFormatPtBr(horaSaida) as horaSaida, statusnegociacao, numeropedido, motivodesistencia, testdrive, testdrivemotivo, testdrivehora, agendamentoContato, IF(agendamentoContato < NOW(), IF(agendamentoContato < DATE_ADD(NOW(), INTERVAL - 2 HOUR), 'Ação Pendente Atrasada', 'Ação Pendente'), '') acao FROM leads INNER JOIN user ON leads.vendedor = user.id WHERE dealer = ? and DATE(horaEntrada) BETWEEN ? AND ? ${SQLnaLoja}`,
       [dealer, dataInicial1, dataFinal1]
     );
     await connection.end();
