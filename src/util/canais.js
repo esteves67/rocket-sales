@@ -51,7 +51,7 @@ exports.listarMensagens = async (idRocketLead) => {
     const [
       resultEm,
     ] = await connection.query(
-      `SELECT id, remetente, html mensagem, data, 'email' tipo FROM emails WHERE (remetente = ?) or (email = ?) order by id limit 2`,
+      `SELECT id, remetente, html mensagem, data, 'email' tipo, direcao FROM emails WHERE (remetente = ?) or (email = ?) order by id limit 2`,
       [result1[0].email, result1[0].email]
     );
     await connection.end();
@@ -65,7 +65,7 @@ exports.listarMensagens = async (idRocketLead) => {
       .input('remetente2', sql.BigInt, '55' + result1[0].telefone2.replace(/\D/g, ''))
       .input('destinatario2', sql.BigInt, '55' + result1[0].telefone2.replace(/\D/g, ''))
       .query(
-        `SELECT id, remetente, mensagem, data, 'whatsapp' tipo FROM WHATSAPP.MENSAGENS where remetente = @remetente or telefone = @destinatario or  remetente = @remetente2 or telefone = @destinatario2`
+        `SELECT id, remetente, mensagem, data, 'whatsapp' tipo, tipo direcao FROM WHATSAPP.MENSAGENS where remetente = @remetente or telefone = @destinatario or  remetente = @remetente2 or telefone = @destinatario2`
       );
 
     resultEm.push(...resultWp.recordset);
@@ -76,6 +76,31 @@ exports.listarMensagens = async (idRocketLead) => {
 
     return { status: 'ok', result };
   } catch (err) {
+    return { status: 'erro', err };
+  }
+};
+
+exports.listarCanais = async (idRocketLead) => {
+  try {
+    const connection1 = await mysql.createConnection(dbConfig);
+    const [
+      result,
+    ] = await connection1.query('SELECT telefone1, telefone2, email FROM leads where (id = ?)', [
+      idRocketLead,
+    ]);
+    await connection1.end();
+
+    const canais = [];
+
+    if (result[0].telefone1) canais.push({ tipo: 'WhatsApp', destinatario: result[0].telefone1 });
+
+    if (result[0].telefone2) canais.push({ tipo: 'WhatsApp', destinatario: result[0].telefone2 });
+
+    if (result[0].email) canais.push({ tipo: 'E-mail', destinatario: result[0].email });
+
+    return { status: 'ok', canais };
+  } catch (err) {
+    console.log(err);
     return { status: 'erro', err };
   }
 };
@@ -99,8 +124,8 @@ exports.email = async (
 
     const connection3 = await mysql.createConnection(dbConfig);
     await connection3.query(
-      'INSERT INTO emails (remetente, email, html, idlead, assunto, messageId) VALUES (?, ?, ?, ?, ?, ?)',
-      [remetente, destinatario, html, lead, assunto, result.messageId]
+      'INSERT INTO emails (remetente, email, html, idlead, assunto, messageId, direcao) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [remetente, destinatario, html, lead, assunto, result.messageId, 'out']
     );
     await connection3.end();
 

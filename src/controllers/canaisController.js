@@ -34,6 +34,20 @@ exports.listarMensagens = async (req, res) => {
   }
 };
 
+exports.listarCanais = async (req, res) => {
+  try {
+    const status = await canais.listarCanais(req.body.lead);
+
+    return res.status(200).send({
+      status,
+    });
+  } catch (err) {
+    return res.status(400).send({
+      err,
+    });
+  }
+};
+
 exports.enviarEmail = async (req, res) => {
   try {
     const status = await canais.email(

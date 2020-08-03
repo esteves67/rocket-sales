@@ -8,4 +8,6 @@ router.post('/enviarWhatsApp', controller.enviarWhatsApp);
 
 router.get('/listarMensagens', controller.listarMensagens);
 
+router.get('/listarCanais', controller.listarCanais);
+
 module.exports = router;
