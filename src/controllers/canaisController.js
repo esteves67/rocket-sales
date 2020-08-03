@@ -10,7 +10,7 @@ exports.enviarWhatsApp = async (req, res) => {
       req.body.lead
     );
 
-    return res.status(400).send({
+    return res.status(200).send({
       status,
     });
   } catch (err) {
@@ -24,7 +24,7 @@ exports.listarMensagens = async (req, res) => {
   try {
     const status = await canais.listarWhatsApp(req.body.lead);
 
-    return res.status(400).send({
+    return res.status(200).send({
       status,
     });
   } catch (err) {
@@ -46,7 +46,7 @@ exports.enviarEmail = async (req, res) => {
       req.body.lead
     );
 
-    return res.status(400).send({
+    return res.status(200).send({
       status,
     });
   } catch (err) {
