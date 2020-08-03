@@ -51,7 +51,7 @@ exports.listarMensagens = async (idRocketLead) => {
     const [
       resultEm,
     ] = await connection.query(
-      `SELECT id, remetente, html mensagem, data, 'email' tipo, direcao FROM emails WHERE (remetente = ?) or (email = ?)`,
+      `SELECT id, remetente, html mensagem, data, 'email' tipo, direcao, UNIX_TIMESTAMP(data) timestamp FROM emails WHERE (remetente = ?) or (email = ?)`,
       [result1[0].email, result1[0].email]
     );
     await connection.end();
@@ -65,13 +65,13 @@ exports.listarMensagens = async (idRocketLead) => {
       .input('remetente2', sql.BigInt, '55' + result1[0].telefone2.replace(/\D/g, ''))
       .input('destinatario2', sql.BigInt, '55' + result1[0].telefone2.replace(/\D/g, ''))
       .query(
-        `SELECT id, remetente, mensagem, data, 'whatsapp' tipo, tipo direcao FROM WHATSAPP.MENSAGENS where remetente = @remetente or telefone = @destinatario or  remetente = @remetente2 or telefone = @destinatario2`
+        `SELECT id, remetente, mensagem, data, 'whatsapp' tipo, tipo direcao, DATEDIFF(SECOND,{d '1970-01-01'}, data) timestamp FROM WHATSAPP.MENSAGENS where remetente = @remetente or telefone = @destinatario or  remetente = @remetente2 or telefone = @destinatario2`
       );
 
     resultEm.push(...resultWp.recordset);
 
     const result = resultEm.sort((a, b) => {
-      return new Date(a.id) - new Date(b.id);
+      return new Date(a.timestamp) - new Date(b.timestamp);
     });
 
     return { status: 'ok', result };

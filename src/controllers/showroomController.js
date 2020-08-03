@@ -458,7 +458,7 @@ exports.listar = async (req, res) => {
     const [
       leads,
     ] = await connection.query(
-      `SELECT leads.id, origem, leads.nome, user.nome as vendedor, veiculoInteresse, DateTimeFormatPtBr(horaEntrada) as horaEntrada, DateTimeFormatPtBr(horaSaida) as horaSaida, statusnegociacao, numeropedido, motivodesistencia, testdrive, testdrivemotivo, testdrivehora, agendamentoContato, IF(agendamentoContato < NOW(), IF(agendamentoContato < DATE_ADD(NOW(), INTERVAL - 2 HOUR), 'Ação Pendente Atrasada', 'Ação Pendente'), '') acao FROM leads INNER JOIN user ON leads.vendedor = user.id WHERE dealer = ? and DATE(horaEntrada) BETWEEN ? AND ? ${SQLnaLoja}`,
+      `SELECT leads.id, origem, leads.nome, user.nome as vendedor, veiculoInteresse, DateTimeFormatPtBr(horaEntrada) as horaEntrada, DateFormatPtBr(horaEntrada) as dataEntrada, DateTimeFormatPtBr(horaSaida) as horaSaida, statusnegociacao, numeropedido, motivodesistencia, testdrive, testdrivemotivo, testdrivehora, DateTimeFormatPtBr(agendamentoContato) agendamentoContato, IF(agendamentoContato < NOW(), IF(agendamentoContato < DATE_ADD(NOW(), INTERVAL - 2 HOUR), 'Ação Pendente Atrasada', 'Ação Pendente'), '') acao FROM leads INNER JOIN user ON leads.vendedor = user.id WHERE dealer = ? and DATE(horaEntrada) BETWEEN ? AND ? ${SQLnaLoja}`,
       [dealer, dataInicial1, dataFinal1]
     );
     await connection.end();
@@ -479,14 +479,15 @@ exports.listar = async (req, res) => {
 
 exports.alterarStatus = async (req, res) => {
   try {
-    const { dealer, lead, status, numeroPedido, motivoDesistencia } = req.body;
+    const { dealer, lead, status, numeroPedido, motivoDesistencia, agendamentoContato } = req.body;
 
     if (
       dealer === undefined ||
       lead === undefined ||
       status === undefined ||
       numeroPedido === undefined ||
-      motivoDesistencia === undefined
+      motivoDesistencia === undefined ||
+      agendamentoContato === undefined
     ) {
       return res.status(400).send({
         status: 'erro',
@@ -517,8 +518,8 @@ exports.alterarStatus = async (req, res) => {
 
     const connection = await mysql.createConnection(dbConfig);
     await connection.query(
-      'UPDATE leads SET statusNegociacao = ?, numeroPedido = NULLIF(?, ""), motivoDesistencia = NULLIF(?, "") WHERE id = ? and dealer = ?;',
-      [status, numeroPedido, motivoDesistencia, lead, dealer]
+      'UPDATE leads SET statusNegociacao = ?, agendamentoContato = ?, numeroPedido = NULLIF(?, ""), motivoDesistencia = NULLIF(?, "") WHERE id = ? and dealer = ?;',
+      [status, agendamentoContato, numeroPedido, motivoDesistencia, lead, dealer]
     );
     await connection.end();
 
