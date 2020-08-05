@@ -51,7 +51,7 @@ exports.listarMensagens = async (idRocketLead) => {
     const [
       resultEm,
     ] = await connection.query(
-      `SELECT id, remetente, html mensagem, DateTimeFormatPtBr(data) data, 'email' tipo, direcao, unix_timestamp(convert_tz(data, '+00:00', @@session.time_zone)) timestamp FROM emails WHERE (remetente = ?) or (email = ?)`,
+      `SELECT id, remetente, html mensagem, DateTimeFormatPtBr(data) data, 'email' tipo, direcao, 123456 as timestamp FROM emails WHERE (remetente = ?) or (email = ?)`,
       [result1[0].email, result1[0].email]
     );
     await connection.end();
