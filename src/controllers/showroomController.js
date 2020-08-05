@@ -32,6 +32,7 @@ exports.cadastro = async (req, res) => {
       horaEntrada,
       observacao,
       dealer,
+      origem
     } = req.body;
 
     if (
@@ -42,6 +43,7 @@ exports.cadastro = async (req, res) => {
       vendedor === undefined ||
       comoconheceu === undefined ||
       horaEntrada === undefined ||
+      origem === undefined ||
       observacao === undefined ||
       dealer === undefined
     ) {
@@ -68,6 +70,14 @@ exports.cadastro = async (req, res) => {
       });
     }
 
+    if (!origem.trim()) {
+      return res.status(400).send({
+        status: 'erro',
+        tipo: 'Validação',
+        mensagem: 'A origem do lead não foi informada.',
+      });
+    }
+
     if (!validator.isEmail(email)) {
       return res.status(400).send({
         status: 'erro',
@@ -81,14 +91,6 @@ exports.cadastro = async (req, res) => {
         status: 'erro',
         tipo: 'Validação',
         mensagem: 'O veículo de interesse não foi informado.',
-      });
-    }
-
-    if (!vendedor.trim()) {
-      return res.status(400).send({
-        status: 'erro',
-        tipo: 'Validação',
-        mensagem: 'O vendedor não foi informado.',
       });
     }
 
@@ -115,7 +117,7 @@ exports.cadastro = async (req, res) => {
     const [
       result,
     ] = await connection.query(
-      'INSERT INTO leads (nome, telefone1, email, veiculoInteresse,  vendedor, comoconheceu, horaEntrada, observacao, dealer, createdBy) VALUES (?, ?, ?, ?, ?, ?, ? ,? ,?, ?);',
+      'INSERT INTO leads (nome, telefone1, email, veiculoInteresse,  vendedor, comoconheceu, horaEntrada, observacao, dealer, origem, createdBy) VALUES (?, ?, ?, ?, ?, ?, ?, ? , ?, ?, ?);',
       [
         nome,
         telefone1,
@@ -126,6 +128,7 @@ exports.cadastro = async (req, res) => {
         horaEntrada1,
         observacao,
         dealer,
+        origem,
         req.userId,
       ]
     );
@@ -416,7 +419,7 @@ exports.registraNegativaTestDrive = async (req, res) => {
 
 exports.listar = async (req, res) => {
   try {
-    const { dealer, dataInicial, dataFinal, naLoja } = req.body;
+    const { dealer, dataInicial, dataFinal, naLoja, vendedores, origens } = req.body;
 
     if (
       dealer === undefined ||
@@ -454,11 +457,21 @@ exports.listar = async (req, res) => {
       SQLnaLoja = ' AND horaSaida is null';
     }
 
+    let SQLvendedor = '';
+    if (vendedores !== '') {
+      SQLvendedor = ` and vendedor in (${vendedores}) `;
+    }
+
+    let SQLorigem = '';
+    if (origens !== '') {
+      SQLorigem = ` AND origem in (${origens}) `;
+    }
+
     const connection = await mysql.createConnection(dbConfig);
     const [
       leads,
     ] = await connection.query(
-      `SELECT leads.id, origem, leads.nome, user.nome as vendedor, veiculoInteresse, DateTimeFormatPtBr(horaEntrada) as horaEntrada, DateFormatPtBr(horaEntrada) as dataEntrada, DateTimeFormatPtBr(horaSaida) as horaSaida, statusnegociacao, numeropedido, motivodesistencia, testdrive, testdrivemotivo, testdrivehora, DateTimeFormatPtBr(agendamentoContato) agendamentoContato, IF(agendamentoContato < NOW(), IF(agendamentoContato < DATE_ADD(NOW(), INTERVAL - 2 HOUR), 'Ação Pendente Atrasada', 'Ação Pendente'), '') acao FROM leads LEFT JOIN user ON leads.vendedor = user.id WHERE dealer = ? and DATE(horaEntrada) BETWEEN ? AND ? ${SQLnaLoja}`,
+      `SELECT leads.id, origem, leads.nome, user.nome as vendedor, veiculoInteresse, DateTimeFormatPtBr(horaEntrada) as horaEntrada, DateFormatPtBr(horaEntrada) as dataEntrada, DateTimeFormatPtBr(horaSaida) as horaSaida, statusnegociacao, numeropedido, motivodesistencia, testdrive, testdrivemotivo, testdrivehora, DateTimeFormatPtBr(agendamentoContato) agendamentoContato, IF(agendamentoContato < NOW(), IF(agendamentoContato < DATE_ADD(NOW(), INTERVAL - 2 HOUR), 'Ação Pendente Atrasada', 'Ação Pendente'), '') acao FROM leads LEFT JOIN user ON leads.vendedor = user.id WHERE dealer = ? and DATE(horaEntrada) BETWEEN ? AND ? ${SQLnaLoja} ${SQLvendedor} ${SQLorigem}`,
       [dealer, dataInicial1, dataFinal1]
     );
     await connection.end();
@@ -561,7 +574,7 @@ exports.selecionarLead = async (req, res) => {
     const [
       dadoslead,
     ] = await connection.query(
-      'SELECT  leads.nome, origem, cpf, leads.dataNascimento, leads.telefone1, leads.telefone2, leads.email, veiculoInteresse, user.id as vendedor,  leads.comoconheceu, leads.observacao, leads.horaEntrada FROM leads INNER JOIN user ON user.id = leads.vendedor WHERE leads.dealer = ? And leads.id = ? ',
+      'SELECT  leads.nome, origem, cpf, leads.dataNascimento, leads.telefone1, leads.telefone2, leads.email, veiculoInteresse, user.id as vendedor,  leads.comoconheceu, leads.observacao, leads.horaEntrada FROM leads left JOIN user ON user.id = leads.vendedor WHERE leads.dealer = ? And leads.id = ? ',
       [dealer, lead]
     );
     await connection.end();
