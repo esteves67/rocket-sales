@@ -3,10 +3,10 @@ const canais = require('../util/canais');
 exports.enviarWhatsApp = async (req, res) => {
   try {
     const status = await canais.whatsApp(
-      5511968659088,
+      5511934956360,
       req.body.celular,
       req.body.mensagem,
-      15,
+      5,
       req.body.lead
     );
 
@@ -51,7 +51,7 @@ exports.listarCanais = async (req, res) => {
 exports.enviarEmail = async (req, res) => {
   try {
     const status = await canais.email(
-      'spjapan@rocketsales.amaro.com.br',
+      'amaro@rocketsales.amaro.com.br',
       req.body.destinatario,
       null,
       null,
