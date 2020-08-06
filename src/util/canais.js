@@ -39,7 +39,7 @@ exports.whatsApp = async (remetente, telefone, mensagem, codEmpresa, idRocketLea
 
 function verificar_undefined(valor) {
   if (valor === undefined) return '';
-  else return valor;
+  else return str(valor);
 }
 
 exports.listarMensagens = async (idRocketLead) => {
@@ -47,7 +47,7 @@ exports.listarMensagens = async (idRocketLead) => {
     const connection1 = await mysql.createConnection(dbConfig);
     const [
       result1,
-    ] = await connection1.query('SELECT isnull(telefone1,99) as telefone1, isnull(telefone2,99) as telefone2, email FROM leads where (id = ?)', [
+    ] = await connection1.query('SELECT telefone1, telefone2, email FROM leads where (id = ?)', [
       idRocketLead,
     ]);
     await connection1.end();
@@ -65,10 +65,10 @@ exports.listarMensagens = async (idRocketLead) => {
 
     const resultWp = await pool
       .request()
-      .input('telefone1', sql.BigInt, '55' + verificar_undefined(result1[0].telefone1).replace(/\D/g, ''))
-      .input('telefone11', sql.BigInt, '55' + verificar_undefined(result1[0].telefone1).replace(/\D/g, ''))
-      .input('telefone2', sql.BigInt, '55' + verificar_undefined(result1[0].telefone2).replace(/\D/g, ''))
-      .input('telefone22', sql.BigInt, '55' + verificar_undefined(result1[0].telefone2).replace(/\D/g, ''))
+      .input('telefone1', sql.BigInt, '55' + verificar_undefined(result1[0].telefone1).toString().replace(/\D/g, ''))
+      .input('telefone11', sql.BigInt, '55' + verificar_undefined(result1[0].telefone1).toString().replace(/\D/g, ''))
+      .input('telefone2', sql.BigInt, '55' + verificar_undefined(result1[0].telefone2).toString().replace(/\D/g, ''))
+      .input('telefone22', sql.BigInt, '55' + verificar_undefined(result1[0].telefone2).toString().replace(/\D/g, ''))
       .query(
         `SELECT id, case when tipo = 'in' then remetente else telefone end remetente, mensagem, CONCAT(CONVERT(VARCHAR(20), data, 103), ' ', CONVERT(VARCHAR(20), data, 108)) data, 'whatsapp' tipo, tipo direcao, DATEDIFF(SECOND,{d '1970-01-01'}, data) timestamp FROM WHATSAPP.MENSAGENS where remetente = @telefone1 or telefone = @telefone11 or remetente = @telefone2 or telefone = @telefone22`
       );
