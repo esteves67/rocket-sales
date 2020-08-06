@@ -47,7 +47,7 @@ exports.listarMensagens = async (idRocketLead) => {
     ]);
     await connection1.end();
 
-    console.log(result1)
+    console.log(result1);
 
     const connection = await mysql.createConnection(dbConfig);
     const [
@@ -60,14 +60,14 @@ exports.listarMensagens = async (idRocketLead) => {
 
     const pool = await sql.connect(config);
 
-      console.log('55' + result1[0].telefone1.toString().replace(/\D/g, ''))
+    console.log('55' + result1[0].telefone1.toString().replace(/\D/g, ''));
 
     const resultWp = await pool
       .request()
       .input('telefone1', sql.BigInt, '55' + result1[0].telefone1.toString().replace(/\D/g, ''))
       .input('telefone11', sql.BigInt, '55' + result1[0].telefone1.toString().replace(/\D/g, ''))
       .input('telefone2', sql.BigInt, '55' + result1[0].telefone2.toString().replace(/\D/g, ''))
-      .input('telefone22', sql.BigInt, '55' + result1[0].telefone).toString().replace(/\D/g, ''))
+      .input('telefone22', sql.BigInt, '55' + result1[0].telefone.toString().replace(/\D/g, ''))
       .query(
         `SELECT id, case when tipo = 'in' then remetente else telefone end remetente, mensagem, CONCAT(CONVERT(VARCHAR(20), data, 103), ' ', CONVERT(VARCHAR(20), data, 108)) data, 'whatsapp' tipo, tipo direcao, DATEDIFF(SECOND,{d '1970-01-01'}, data) timestamp FROM WHATSAPP.MENSAGENS where remetente = @telefone1 or telefone = @telefone11 or remetente = @telefone2 or telefone = @telefone22`
       );
