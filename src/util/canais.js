@@ -47,7 +47,7 @@ exports.listarMensagens = async (idRocketLead) => {
     const connection1 = await mysql.createConnection(dbConfig);
     const [
       result1,
-    ] = await connection1.query('SELECT telefone1, telefone2, email FROM leads where (id = ?)', [
+    ] = await connection1.query('SELECT isnull(telefone1,99) as telefone1, isnull(telefone2,99) as telefone2, email FROM leads where (id = ?)', [
       idRocketLead,
     ]);
     await connection1.end();
