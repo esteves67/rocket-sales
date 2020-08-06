@@ -52,6 +52,8 @@ exports.listarMensagens = async (idRocketLead) => {
     ]);
     await connection1.end();
 
+    console.log(result1)
+
     const connection = await mysql.createConnection(dbConfig);
     const [
       resultEm,
