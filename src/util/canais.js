@@ -77,6 +77,8 @@ exports.listarMensagens = async (idRocketLead) => {
       console.log(err)
     })
 
+    console.log(result)
+
     return { status: 'ok', result };
   } catch (err) {
     return { status: 'erro', err };
