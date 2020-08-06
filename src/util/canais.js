@@ -37,6 +37,11 @@ exports.whatsApp = async (remetente, telefone, mensagem, codEmpresa, idRocketLea
   }
 };
 
+function verificar_undefined(valor) {
+  if (valor === undefined) return '';
+  else return valor;
+}
+
 exports.listarMensagens = async (idRocketLead) => {
   try {
     const connection1 = await mysql.createConnection(dbConfig);
@@ -60,10 +65,10 @@ exports.listarMensagens = async (idRocketLead) => {
 
     const resultWp = await pool
       .request()
-      .input('telefone1', sql.BigInt, '55' + result1[0].telefone1.replace(/\D/g, ''))
-      .input('telefone11', sql.BigInt, '55' + result1[0].telefone1.replace(/\D/g, ''))
-      .input('telefone2', sql.BigInt, '55' + result1[0].telefone2.replace(/\D/g, ''))
-      .input('telefone22', sql.BigInt, '55' + result1[0].telefone2.replace(/\D/g, ''))
+      .input('telefone1', sql.BigInt, '55' + verificar_undefined(result1[0].telefone1).replace(/\D/g, ''))
+      .input('telefone11', sql.BigInt, '55' + verificar_undefined(result1[0].telefone1).replace(/\D/g, ''))
+      .input('telefone2', sql.BigInt, '55' + verificar_undefined(result1[0].telefone2).replace(/\D/g, ''))
+      .input('telefone22', sql.BigInt, '55' + verificar_undefined(result1[0].telefone2).replace(/\D/g, ''))
       .query(
         `SELECT id, case when tipo = 'in' then remetente else telefone end remetente, mensagem, CONCAT(CONVERT(VARCHAR(20), data, 103), ' ', CONVERT(VARCHAR(20), data, 108)) data, 'whatsapp' tipo, tipo direcao, DATEDIFF(SECOND,{d '1970-01-01'}, data) timestamp FROM WHATSAPP.MENSAGENS where remetente = @telefone1 or remetente = @telefone2 or telefone = @telefone1 or telefone = @telefone2 `
       );
