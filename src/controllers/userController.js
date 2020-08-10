@@ -344,6 +344,7 @@ exports.autenticacao = async (req, res) => {
           status: 'ok',
           mensagem: 'Login realizado com sucesso.',
           nome: rows[0].nome,
+          id: rows[0].id,
           qtdeConvites: rows3.length,
           token,
           dealerAtivo,
