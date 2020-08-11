@@ -4,6 +4,7 @@ const controller = require('../controllers/canaisController');
 const router = express.Router();
 
 router.post('/enviarEmail', controller.enviarEmail);
+router.post('/uploadAnexoEmail', controller.uploadAnexoEmail);
 router.post('/enviarWhatsApp', controller.enviarWhatsApp);
 
 router.get('/listarMensagens', controller.listarMensagens);

@@ -1,4 +1,5 @@
 const canais = require('../util/canais');
+var uuid = require('uuid');
 
 exports.enviarWhatsApp = async (req, res) => {
   try {
@@ -62,6 +63,31 @@ exports.enviarEmail = async (req, res) => {
 
     return res.status(200).send({
       status,
+    });
+  } catch (err) {
+    return res.status(400).send({
+      err,
+    });
+  }
+};
+
+exports.uploadAnexoEmail = async (req, res) => {
+  try {
+    const id = uuid.v1();
+
+    const fileKeys = Object.keys(req.files);
+
+    fileKeys.forEach((element) => {
+      req.files[element].mv(
+        `C:/Server-Web/Node/rocket-sales-attachments/${id}_${req.files[element].name.replace(' ', '')}`,
+        (err) => {
+          if (err) console.log(err)
+        }
+      );
+    });
+
+    return res.status(200).send({
+      status: 'ok',
     });
   } catch (err) {
     return res.status(400).send({

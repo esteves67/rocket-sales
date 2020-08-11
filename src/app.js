@@ -1,5 +1,6 @@
 require('dotenv').config({path: __dirname + '/../.env'});
 const express = require('express');
+const fileUpload = require('express-fileupload');
 
 const cors = require('cors');
 
@@ -10,6 +11,9 @@ app.use(cors());
 // * para o express identificar parametros via url e json
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
+app.use(fileUpload(
+  {createParentPath: true}
+));
 
 // * importação das rotas
 app.use('/user', require('./routes/userRoute'));
