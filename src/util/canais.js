@@ -16,6 +16,10 @@ const dbConfig = {
   database: process.env.DB_NAME,
 };
 
+// exports.whatsAppFiles = async (remetente, telefone, caminho, arquivo, codEmpresa, idRocketLead) => {
+
+// }
+
 exports.whatsApp = async (remetente, telefone, mensagem, codEmpresa, idRocketLead) => {
   try {
     const pool = await sql.connect(config);
@@ -69,27 +73,32 @@ exports.listarMensagens = async (idRocketLead) => {
 
         if (resultEm[i].mensagem.search(cid) > 0) {
           //console.log('tem que tirar: ', anexo[attachment])
-          resultEm[i].anexo = resultEm[i].anexo.replace(anexo[attachment]+';', '');
+          resultEm[i].anexo = resultEm[i].anexo.replace(anexo[attachment] + ';', '');
         }
 
-        resultEm[i].mensagem = resultEm[i].mensagem.replace(cid, anexo[attachment].split(':==:')[1].replace('C:/Server-Web/Node/rocket-sales-attachments/', 'https://files.amaro.com.br/'));
+        resultEm[i].mensagem = resultEm[i].mensagem.replace(
+          cid,
+          anexo[attachment]
+            .split(':==:')[1]
+            .replace('C:/Server-Web/Node/rocket-sales-attachments/', 'https://files.amaro.com.br/')
+        );
       }
 
       const anexos = [];
       anexo = resultEm[i].anexo.split(';');
-      for (let y = 0; y < anexo.length; y++){
-        const arquivo = anexo[y].split(":==:")[0]
+      for (let y = 0; y < anexo.length; y++) {
+        const arquivo = anexo[y].split(':==:')[0];
 
-        if (arquivo != ''){
-          const path = anexo[y].split(":==:")[1].replace('C:/Server-Web/Node/rocket-sales-attachments/', 'https://files.amaro.com.br/')
-          anexos.push([arquivo, path])
+        if (arquivo != '') {
+          const path = anexo[y]
+            .split(':==:')[1]
+            .replace('C:/Server-Web/Node/rocket-sales-attachments/', 'https://files.amaro.com.br/');
+          anexos.push([arquivo, path]);
         }
       }
 
-      resultEm[i].anexo = anexos
-
+      resultEm[i].anexo = anexos;
     }
-
 
     const pool = await sql.connect(config);
 
@@ -150,20 +159,31 @@ exports.email = async (
   destinatariocco,
   assunto,
   html,
-  lead
+  lead,
+  anexos
 ) => {
   try {
+    const attachments = {};
+
+    for (anexo in anexos.split(';')) {
+      attachments.push({
+        filename: anexo.split('/').pop(),
+        path: anexo,
+      });
+    }
+
     const result = await transporter.sendMail({
       from: remetente,
       to: destinatario,
       subject: assunto,
       html,
+      attachments
     });
 
     const connection3 = await mysql.createConnection(dbConfig);
     await connection3.query(
-      'INSERT INTO emails (remetente, email, html, idlead, assunto, messageId, direcao, data) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())',
-      [remetente, destinatario, html, lead, assunto, result.messageId, 'out']
+      'INSERT INTO emails (remetente, email, html, idlead, assunto, messageId, direcao, data, anexos) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?)',
+      [remetente, destinatario, html, lead, assunto, result.messageId, 'out', anexos]
     );
     await connection3.end();
 
