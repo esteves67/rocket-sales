@@ -75,7 +75,8 @@ exports.enviarEmail = async (req, res) => {
       null,
       req.body.assunto,
       req.body.html,
-      req.body.lead
+      req.body.lead,
+      req.body.anexos
     );
 
     return res.status(200).send({
