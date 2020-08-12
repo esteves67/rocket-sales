@@ -57,7 +57,7 @@ exports.listarMensagens = async (idRocketLead) => {
     await connection.end();
 
     for (let i = 0; i < resultEm.length; i++) {
-      const anexo = resultEm[i].anexo.split(';');
+      let anexo = resultEm[i].anexo.split(';');
       const contentIdMap = JSON.parse(resultEm[i].contentIdMap);
 
       //console.log('antes: ', resultEm[i].anexo);
@@ -72,11 +72,23 @@ exports.listarMensagens = async (idRocketLead) => {
           resultEm[i].anexo = resultEm[i].anexo.replace(anexo[attachment]+';', '');
         }
 
-        resultEm[i].mensagem = resultEm[i].mensagem.replace(cid, anexo[attachment].split(':==:')[1].replace('C:/Server-Web/Node/rocket-sales-attachments/', 'https://files.rocketsales.amaro.com.br/'));
+        resultEm[i].mensagem = resultEm[i].mensagem.replace(cid, anexo[attachment].split(':==:')[1].replace('C:/Server-Web/Node/rocket-sales-attachments/', 'https://files.amaro.com.br/'));
       }
-      //console.log('depois: ', resultEm[i].anexo)
-    }
 
+      const anexos = [];
+      anexo = resultEm[i].anexo.split(';');
+      for (let y = 0; y < anexo.length; y++){
+        const arquivo = anexo[y].split(":==:")[0]
+
+        if (arquivo != ''){
+          const path = anexo[y].split(":==:")[1].replace('C:/Server-Web/Node/rocket-sales-attachments/', 'https://files.amaro.com.br/')
+          anexos.push([arquivo, path])
+        }
+      }
+
+      resultEm[i].anexo = anexos
+
+    }
 
 
     const pool = await sql.connect(config);
