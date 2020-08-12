@@ -3,18 +3,35 @@ var uuid = require('uuid');
 
 exports.enviarWhatsApp = async (req, res) => {
   try {
-    const status = await canais.whatsApp(
-      5511934956360,
-      req.body.celular,
-      req.body.mensagem,
-      5,
-      req.body.lead
-    );
+    let status = '';
+
+    if (req.body.tipo === 'files') {
+      const files = req.body.mensagem.split(';');
+
+      for (file of files) {
+        status = await canais.whatsApp(
+          5511934956360,
+          req.body.celular,
+          file,
+          5,
+          req.body.lead
+        );
+      }
+    } else {
+      status = await canais.whatsApp(
+        5511934956360,
+        req.body.celular,
+        req.body.mensagem,
+        5,
+        req.body.lead
+      );
+    }
 
     return res.status(200).send({
       status,
     });
   } catch (err) {
+    console.log(err)
     return res.status(400).send({
       err,
     });
@@ -77,17 +94,31 @@ exports.uploadAnexoEmail = async (req, res) => {
 
     const fileKeys = Object.keys(req.files);
 
+    const arquivos = [];
+
     fileKeys.forEach((element) => {
+      arquivos.push([req.files[element].name.replace(
+        ' ',
+        ''
+      ), `https://files.amaro.com.br/${id}_${req.files[element].name.replace(
+        ' ',
+        ''
+      )}`])
+
       req.files[element].mv(
-        `C:/Server-Web/Node/rocket-sales-attachments/${id}_${req.files[element].name.replace(' ', '')}`,
+        `C:/Server-Web/Node/rocket-sales/public/${id}_${req.files[element].name.replace(
+          ' ',
+          ''
+        )}`,
         (err) => {
-          if (err) console.log(err)
+          if (err) console.log(err);
         }
       );
     });
 
     return res.status(200).send({
       status: 'ok',
+      arquivos
     });
   } catch (err) {
     return res.status(400).send({
