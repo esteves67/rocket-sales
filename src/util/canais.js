@@ -51,10 +51,33 @@ exports.listarMensagens = async (idRocketLead) => {
     const [
       resultEm,
     ] = await connection.query(
-      `SELECT id, remetente, html mensagem, DateTimeFormatPtBr(data) data, 'email' tipo, direcao, unix_timestamp(convert_tz(data, '+00:00', @@session.time_zone)) as timestamp, anexo FROM emails WHERE (remetente = ?) or (email = ?)`,
+      `SELECT id, remetente, html mensagem, DateTimeFormatPtBr(data) data, 'email' tipo, direcao, unix_timestamp(convert_tz(data, '+00:00', @@session.time_zone)) as timestamp, anexo, contentIdMap FROM emails WHERE (remetente = ?) or (email = ?)`,
       [result1[0].email, result1[0].email]
     );
     await connection.end();
+
+    for (let i = 0; i < resultEm.length; i++) {
+      const anexo = resultEm[i].anexo.split(';');
+      const contentIdMap = JSON.parse(resultEm[i].contentIdMap);
+
+      //console.log('antes: ', resultEm[i].anexo);
+
+      for (let k = 0; k < Object.entries(contentIdMap).length; k++) {
+        const key = Object.entries(contentIdMap)[k][0];
+        const cid = `cid:${key.replace('<', '').replace('>', '')}`;
+        const attachment = contentIdMap[key].replace('attachment-', '') - 1;
+
+        if (resultEm[i].mensagem.search(cid) > 0) {
+          //console.log('tem que tirar: ', anexo[attachment])
+          resultEm[i].anexo = resultEm[i].anexo.replace(anexo[attachment]+';', '');
+        }
+
+        resultEm[i].mensagem = resultEm[i].mensagem.replace(cid, anexo[attachment].split(':==:')[1].replace('C:/Server-Web/Node/rocket-sales-attachments/', 'https://files.rocketsales.amaro.com.br/'));
+      }
+      //console.log('depois: ', resultEm[i].anexo)
+    }
+
+
 
     const pool = await sql.connect(config);
 
@@ -65,25 +88,21 @@ exports.listarMensagens = async (idRocketLead) => {
       .input('telefone2', sql.BigInt, '55' + result1[0].telefone2.replace(/\D/g, ''))
       .input('telefone22', sql.BigInt, '55' + result1[0].telefone2.replace(/\D/g, ''))
       .query(
-        `SELECT id, case when tipo = 'in' then remetente else telefone end remetente, mensagem, CONCAT(CONVERT(VARCHAR(20), data, 103), ' ', CONVERT(VARCHAR(20), data, 108)) data, 'whatsapp' tipo, tipo direcao, DATEDIFF(SECOND,{d '1970-01-01'}, data) timestamp, '' anexo FROM WHATSAPP.MENSAGENS where remetente = @telefone1 or telefone = @telefone11 or remetente = @telefone2 or telefone = @telefone22`
+        `SELECT id, case when tipo = 'in' then remetente else telefone end remetente, mensagem, CONCAT(CONVERT(VARCHAR(20), data, 103), ' ', CONVERT(VARCHAR(20), data, 108)) data, 'whatsapp' tipo, tipo direcao, DATEDIFF(SECOND,{d '1970-01-01'}, data) timestamp, '' anexo, '' contentIdMap FROM WHATSAPP.MENSAGENS where (remetente = @telefone1 or telefone = @telefone11 or remetente = @telefone2 or telefone = @telefone22)`
       );
     resultEm.push(...resultWp.recordset);
-
-    console.log(resultWp)
-    console.log(resultEm)
 
     const result = resultEm.sort((a, b) => {
       return new Date(a.timestamp) - new Date(b.timestamp);
     });
 
-    sql.on('error', err => {
-      console.log(err)
-    })
-
-    console.log(result)
+    sql.on('error', (err) => {
+      console.log(err);
+    });
 
     return { status: 'ok', result };
   } catch (err) {
+    console.log(err);
     return { status: 'erro', err };
   }
 };
