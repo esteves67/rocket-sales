@@ -472,7 +472,7 @@ exports.listar = async (req, res) => {
 
     let SQLstatus = '';
     if (status !== '') {
-      SQLstatus = ` AND status in (${status}) `;
+      SQLstatus = ` AND statusnegociacao in (${status}) `;
     }
 
     const connection = await mysql.createConnection(dbConfig);
