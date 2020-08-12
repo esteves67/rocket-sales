@@ -15,7 +15,7 @@ app.use(fileUpload(
   {createParentPath: true}
 ));
 
-app.use(express.static(__dirname + '/public'));
+app.use(express.static(__dirname + '/../public'));
 
 // * importação das rotas
 app.use('/user', require('./routes/userRoute'));
