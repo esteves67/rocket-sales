@@ -163,16 +163,16 @@ exports.email = async (
   anexos
 ) => {
   try {
-    const attachments = [];
+    // const attachments = [];
 
-    for (anexo in anexos.split(';')) {
-      attachments.push({
-        filename: anexo.split('/').pop(),
-        path: anexo,
-      });
-    }
+    // for (anexo in anexos.split(';')) {
+    //   attachments.push({
+    //     filename: anexo.split('/').pop(),
+    //     path: anexo,
+    //   });
+    // }
 
-    console.log(JSON.stringify(attachments))
+    // console.log(JSON.stringify(attachments))
 
     const result = await transporter.sendMail({
       from: remetente,
