@@ -62,6 +62,7 @@ exports.listarMensagens = async (idRocketLead) => {
 
     for (let i = 0; i < resultEm.length; i++) {
       let anexo = resultEm[i].anexo.split(';');
+      console.log('1', anexo)
       const contentIdMap = JSON.parse(resultEm[i].contentIdMap);
 
       //console.log('antes: ', resultEm[i].anexo);
@@ -86,6 +87,7 @@ exports.listarMensagens = async (idRocketLead) => {
 
       const anexos = [];
       anexo = resultEm[i].anexo.split(';');
+      console.log('2', anexo)
       for (let y = 0; y < anexo.length; y++) {
         const arquivo = anexo[y].split(':==:')[0];
 
