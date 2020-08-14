@@ -163,7 +163,7 @@ exports.email = async (
   anexos
 ) => {
   try {
-    const attachments = {};
+    const attachments = [];
 
     for (anexo in anexos.split(';')) {
       attachments.push({
@@ -177,7 +177,7 @@ exports.email = async (
       to: destinatario,
       subject: assunto,
       html,
-      attachments
+      attachments: JSON.stringify(attachments)
     });
 
     const connection3 = await mysql.createConnection(dbConfig);
