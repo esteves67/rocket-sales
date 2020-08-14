@@ -183,7 +183,7 @@ exports.email = async (
 
     const connection3 = await mysql.createConnection(dbConfig);
     await connection3.query(
-      'INSERT INTO emails (remetente, email, html, idlead, assunto, messageId, direcao, data, anexos) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?)',
+      'INSERT INTO emails (remetente, email, html, idlead, assunto, messageId, direcao, data, anexo) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?)',
       [remetente, destinatario, html, lead, assunto, result.messageId, 'out', anexos]
     );
     await connection3.end();
