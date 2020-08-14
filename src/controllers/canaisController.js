@@ -10,7 +10,7 @@ exports.enviarWhatsApp = async (req, res) => {
 
       for (file of files) {
         status = await canais.whatsApp(
-          5511934956360,
+          5511948070611,
           req.body.celular,
           file,
           5,
@@ -19,7 +19,7 @@ exports.enviarWhatsApp = async (req, res) => {
       }
     } else {
       status = await canais.whatsApp(
-        5511934956360,
+        5511948070611,
         req.body.celular,
         req.body.mensagem,
         5,

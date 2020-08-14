@@ -189,6 +189,7 @@ exports.email = async (
 
     return { status: 'enviado' };
   } catch (err) {
+    console.log(err)
     return { status: 'erro', err };
   }
 };
