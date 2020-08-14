@@ -172,12 +172,13 @@ exports.email = async (
       });
     }
 
+    console.log(JSON.stringify(attachments))
+
     const result = await transporter.sendMail({
       from: remetente,
       to: destinatario,
       subject: assunto,
       html,
-      attachments: JSON.stringify(attachments)
     });
 
     const connection3 = await mysql.createConnection(dbConfig);
