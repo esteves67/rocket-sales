@@ -128,7 +128,11 @@ exports.editar = async (req, res) => {
       dealer.nome === undefined ||
       dealer.fabricante === undefined ||
       dealer.plano === undefined ||
-      dealer.contaFaturamento === undefined
+      dealer.contaFaturamento === undefined ||
+      dealer.whatsapp1 === undefined ||
+      dealer.whatsapp2 === undefined ||
+      dealer.whatsapp3 === undefined ||
+      dealer.email === undefined
     ) {
       return res.status(400).send({
         status: 'erro',
@@ -185,8 +189,8 @@ exports.editar = async (req, res) => {
       const [
         result,
       ] = await connection.query(
-        'UPDATE dealer SET nome = ?, fabricante = ?, plano = ?, contaFaturamento = ? where id = ?',
-        [dealer.nome, dealer.fabricante, dealer.plano, dealer.contaFaturamento, dealer.dealer]
+        'UPDATE dealer SET nome = ?, fabricante = ?, plano = ?, contaFaturamento = ?, whatsapp1 = ?, whatsapp2 = ?, whatsapp3 = ?, email = ? where id = ?',
+        [dealer.nome, dealer.fabricante, dealer.plano, dealer.contaFaturamento, dealer.whatsapp1, dealer.whatsapp2, dealer.whatsapp3, dealer.email, dealer.dealer]
       );
       await connection.end();
 
@@ -352,7 +356,7 @@ exports.listarConvites = async (req, res) => {
   try {
     const connection = await mysql.createConnection(dbConfig);
     const [convites] = await connection.query(
-      'SELECT dealerconvites.id, user.nome as convidante, dealerconvites.email, dealerconvites.createdAt as ConvidadoEm, dealerconvites.aceitoEm as ConviteAceitoEm FROM dealerconvites inner join user on dealerconvites.convidante = user.id where dealer = ?',
+      'SELECT dealerconvites.id, user.nome as convidante, dealerconvites.email, DateFormatPtBr(dealerconvites.createdAt) as ConvidadoEm, DateFormatPtBr(dealerconvites.aceitoEm) as ConviteAceitoEm FROM dealerconvites inner join user on dealerconvites.convidante = user.id where dealer = ?',
       dealer
     );
     await connection.end();
@@ -377,7 +381,7 @@ exports.dealer = async (req, res) => {
   try {
     const connection = await mysql.createConnection(dbConfig);
     const [loja] = await connection.query(
-      'SELECT nome, fabricante, contaFaturamento, plano FROM dealer where id = ?',
+      'SELECT nome, fabricante, contaFaturamento, plano, whatsapp1, whatsapp2, whatsapp3, email FROM dealer where id = ?',
       dealer
     );
     await connection.end();

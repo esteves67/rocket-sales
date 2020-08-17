@@ -32,7 +32,7 @@ exports.cadastro = async (req, res) => {
       horaEntrada,
       observacao,
       dealer,
-      origem
+      origem,
     } = req.body;
 
     if (
@@ -78,7 +78,7 @@ exports.cadastro = async (req, res) => {
       });
     }
 
-    if (!validator.isEmail(email) || email == '') {
+    if (!validator.isEmail(email) && email !== '') {
       return res.status(400).send({
         status: 'erro',
         tipo: 'Validação',
@@ -134,7 +134,7 @@ exports.cadastro = async (req, res) => {
     );
     await connection.end();
 
-    logLead('Cliente inserido', req.userId, dealer, result.insertId, null);
+    logLead('Lead Cadastrado', req.userId, dealer, result.insertId, null);
 
     return res.status(200).send({
       status: 'ok',
@@ -196,7 +196,7 @@ exports.atualizar = async (req, res) => {
       });
     }
 
-    if (!cpfValidator.isValid(cpf)) {
+    if (!cpfValidator.isValid(cpf) && cpf !== '') {
       return res.status(400).send({
         status: 'erro',
         tipo: 'Validação',
@@ -212,24 +212,20 @@ exports.atualizar = async (req, res) => {
       });
     }
 
-    if (!dataNascimento.trim()) {
-      return res.status(400).send({
-        status: 'erro',
-        tipo: 'Validação',
-        mensagem: 'A data de nascimento do cliente não foi informada.',
-      });
+    let dataNascimento1 = null;
+
+    if (dataNascimento.trim()) {
+      dataNascimento1 = moment(dataNascimento, 'DD/MM/YYYY', true).format('YYYY-MM-DD');
+      if (dataNascimento1 === 'Invalid date') {
+        return res.status(400).send({
+          status: 'erro',
+          tipo: 'Validação',
+          mensagem: 'A data de nascimento do cliente é inválida.',
+        });
+      }
     }
 
-    const dataNascimento1 = moment(dataNascimento, 'DD/MM/YYYY', true).format('YYYY-MM-DD');
-    if (dataNascimento1 === 'Invalid date') {
-      return res.status(400).send({
-        status: 'erro',
-        tipo: 'Validação',
-        mensagem: 'A data de nascimento do cliente é inválida.',
-      });
-    }
-
-    if (!validator.isEmail(email)) {
+    if (!validator.isEmail(email) && email !== '') {
       return res.status(400).send({
         status: 'erro',
         tipo: 'Validação',
@@ -237,7 +233,7 @@ exports.atualizar = async (req, res) => {
       });
     }
 
-    if (!veiculoInteresse.trim()) {
+    if (!veiculoInteresse.trim() && veiculoInteresse !== '') {
       return res.status(400).send({
         status: 'erro',
         tipo: 'Validação',
@@ -273,7 +269,7 @@ exports.atualizar = async (req, res) => {
     );
     await connection.end();
 
-    logLead('Cliente atualizado', req.userId, dealer, lead, null);
+    logLead('Dados Atualizados', req.userId, dealer, lead, null);
 
     return res.status(200).send({
       status: 'ok',
@@ -318,7 +314,7 @@ exports.registraSaida = async (req, res) => {
     ]);
     await connection.end();
 
-    logLead('Saída registrada', req.userId, dealer, lead, null);
+    logLead('Horário de Saída Registrado', req.userId, dealer, lead, null);
 
     return res.status(200).send({
       status: 'ok',
@@ -364,7 +360,7 @@ exports.registraTestDrive = async (req, res) => {
     );
     await connection.end();
 
-    logLead('Test Drive realizado', req.userId, dealer, lead, null);
+    logLead('Test Drive Realizado em ' + testDriveHora, req.userId, dealer, lead, null);
 
     return res.status(200).send({
       status: 'ok',
@@ -401,7 +397,7 @@ exports.registraNegativaTestDrive = async (req, res) => {
     );
     await connection.end();
 
-    logLead('Test Drive não realizado', req.userId, dealer, lead, testDriveMotivo);
+    logLead('Test Drive não realizado. Motivo: ' + testDriveMotivo, req.userId, dealer, lead, null);
 
     return res.status(200).send({
       status: 'ok',
@@ -517,7 +513,7 @@ exports.alterarStatus = async (req, res) => {
       });
     }
 
-    if (status === 'Comprou') {
+    if (status === 'Sucesso') {
       if (numeroPedido === '') {
         return res.status(400).send({
           status: 'erro',
@@ -527,7 +523,7 @@ exports.alterarStatus = async (req, res) => {
       }
     }
 
-    if (status === 'Desistiu') {
+    if (status === 'Insucesso') {
       if (motivoDesistencia === '') {
         return res.status(400).send({
           status: 'erro',
@@ -544,12 +540,20 @@ exports.alterarStatus = async (req, res) => {
     );
     await connection.end();
 
+    let sub = '';
+    let agend = '';
+    if (status === 'Sucesso' || status === 'Insucesso') {
+      sub = ' - ' + motivoDesistencia + numeroPedido;
+    } else {
+      agend = 'Agendamento: ' + agendamentoContato;
+    }
+
     logLead(
-      `Status Lead foi alterado para ${status}.`,
+      `Status do lead foi alterado para ${status}${sub}. ${agend}`,
       req.userId,
       dealer,
       lead,
-      motivoDesistencia,
+      null
     );
 
     return res.status(200).send({

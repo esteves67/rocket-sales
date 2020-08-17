@@ -31,7 +31,7 @@ const authDealer = async (req, res, next) => {
     const [
       user,
     ] = await connection0.query(
-      'SELECT * FROM dealerUsers inner join permissoes on permissoes.id = dealerUsers.permissao WHERE dealer = ? and user = ?',
+      'SELECT * FROM dealerUsers inner join permissoes on permissoes.id = dealerUsers.permissao inner join dealer on dealerUsers.dealer = dealer.id WHERE dealer = ? and user = ?',
       [req.body.dealer, req.userId]
     );
     await connection0.end();
@@ -47,6 +47,31 @@ const authDealer = async (req, res, next) => {
     req.allow.ConvidarUsuarios = user[0].allow_ConvidarUsuarios;
     req.allow.AlterarDadosLoja = user[0].allow_AlterarDadosLoja;
     req.allow.AlterarPermissaoUsuarios = user[0].allow_AlterarPermissaoUsuarios;
+    req.allow.AlterarVendedor = user[0].allow_AlterarVendedor;
+
+    req.dealerEmail = user[0].email + '@rocketsales.amaro.com.br';
+    if (user[0].whatsapp1 !== undefined) {
+      req.dealerWhatsapp1 = '55' + user[0].whatsapp1
+        .replace('(', '')
+        .replace(')', '')
+        .replace('-', '')
+        .replace(' ', '');
+    }
+
+    if (user[0].whatsapp2 !== undefined) {
+      req.dealerWhatsapp2 = '55' + user[0].whatsapp2
+        .replace('(', '')
+        .replace(')', '')
+        .replace('-', '')
+        .replace(' ', '');
+    }
+
+    if (user[0].whatsapp3 !== undefined)
+      req.dealerWhatsapp3 = '55' + user[0].whatsapp3
+        .replace('(', '')
+        .replace(')', '')
+        .replace('-', '')
+        .replace(' ', '');
   }
 
   next();
