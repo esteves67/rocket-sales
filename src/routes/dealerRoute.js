@@ -11,6 +11,8 @@ router.get('/listar', auth, controller.listar);
 
 router.get('/dealer', auth, authDealer, controller.dealer);
 
+router.get('/mudarLoja', auth, authDealer, controller.mudarLoja);
+
 router.post('/definirPrincipal', auth, authDealer, controller.definirPrincipal);
 
 router.post('/convidarUsuario', auth, authDealer, authPermissao('ConvidarUsuarios'), controller.convidarUsuario);

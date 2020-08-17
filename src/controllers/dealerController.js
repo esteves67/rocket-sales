@@ -190,7 +190,17 @@ exports.editar = async (req, res) => {
         result,
       ] = await connection.query(
         'UPDATE dealer SET nome = ?, fabricante = ?, plano = ?, contaFaturamento = ?, whatsapp1 = ?, whatsapp2 = ?, whatsapp3 = ?, email = ? where id = ?',
-        [dealer.nome, dealer.fabricante, dealer.plano, dealer.contaFaturamento, dealer.whatsapp1, dealer.whatsapp2, dealer.whatsapp3, dealer.email, dealer.dealer]
+        [
+          dealer.nome,
+          dealer.fabricante,
+          dealer.plano,
+          dealer.contaFaturamento,
+          dealer.whatsapp1,
+          dealer.whatsapp2,
+          dealer.whatsapp3,
+          dealer.email,
+          dealer.dealer,
+        ]
       );
       await connection.end();
 
@@ -391,6 +401,63 @@ exports.dealer = async (req, res) => {
     return res.status(200).send({
       status: 'ok',
       loja,
+    });
+  } catch (err) {
+    tratamentoErros(req, res, err);
+    return res.status(400).send({
+      status: 'erro',
+      tipo: 'Erro de Servidor',
+      mensagem: 'Ocorreu um erro ao obter os dados da loja.',
+    });
+  }
+};
+
+exports.mudarLoja = async (req, res) => {
+  const { dealer } = req.body;
+
+  try {
+    const connection = await mysql.createConnection(dbConfig);
+    const [loja] = await connection.query(
+      'SELECT nome, fabricante, contaFaturamento, plano, whatsapp1, whatsapp2, whatsapp3, email FROM dealer where id = ?',
+      dealer
+    );
+    await connection.end();
+
+    loja[0].permissao = req.userPermissao;
+
+    const connection2 = await mysql.createConnection(dbConfig);
+    const [
+      rows2,
+    ] = await connection2.query(
+      'SELECT dealer.nome, dealer.plano, dealer.fabricante, dealer, permissao FROM dealerUsers INNER JOIN dealer on dealerUsers.dealer = dealer.id WHERE user = ? and dealer = ?',
+      [req.userId, dealer]
+    );
+    await connection2.end();
+
+    let dealerAtivo = null;
+
+    if (rows2.length > 0) {
+      const connection0 = await mysql.createConnection(dbConfig);
+      const [permissoes] = await connection0.query(
+        'SELECT * from permissoes where id = ?',
+        rows2[0].permissao
+      );
+      await connection0.end();
+
+      dealerAtivo = {
+        dealer: rows2[0].dealer,
+        dealerNome: rows2[0].nome,
+        dealerPlano: rows2[0].plano,
+        dealerFabricante: rows2[0].fabricante,
+        permissao: rows2[0].permissao,
+        permissoes,
+      };
+    }
+
+    return res.status(200).send({
+      status: 'ok',
+      loja,
+      dealerAtivo
     });
   } catch (err) {
     tratamentoErros(req, res, err);
