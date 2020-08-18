@@ -35,20 +35,22 @@ exports.enviarWhatsApp = async (req, res) => {
 
   try {
     if (req.body.tipo === 'files') {
-      const files = req.body.mensagem.split(';');
+      const files = req.body.mensagem.split(';==;');
 
       for (file of files) {
-        const pool = await sql.connect(config);
+        if (file !== '') {
+          const pool = await sql.connect(config);
 
-        await pool
-          .request()
-          .input('remetente', sql.BigInt, req.dealerWhatsapp1)
-          .input('telefone', sql.BigInt, req.body.celular)
-          .input('mensagem', sql.VarChar, file)
-          .input('codEmpresa', sql.Int, 5)
-          .query(
-            'INSERT INTO WHATSAPP.MENSAGENS (REMETENTE, TELEFONE, MENSAGEM, CODEMPRESA) VALUES (@remetente, @telefone, @mensagem, @codEmpresa)'
-          );
+          await pool
+            .request()
+            .input('remetente', sql.BigInt, req.dealerWhatsapp1)
+            .input('telefone', sql.BigInt, req.body.celular)
+            .input('mensagem', sql.VarChar, file)
+            .input('codEmpresa', sql.Int, 5)
+            .query(
+              'INSERT INTO WHATSAPP.MENSAGENS (REMETENTE, TELEFONE, MENSAGEM, CODEMPRESA) VALUES (@remetente, @telefone, @mensagem, @codEmpresa)'
+            );
+        }
       }
     } else {
       const pool = await sql.connect(config);
@@ -68,6 +70,7 @@ exports.enviarWhatsApp = async (req, res) => {
       status: 'ok',
     });
   } catch (err) {
+    tratamentoErros(req, res, err)
     return res.status(400).send({
       status: 'erro',
       tipo: 'Erro de Servidor',
@@ -90,7 +93,7 @@ exports.listarMensagens = async (req, res) => {
     const [
       result1,
     ] = await connection1.query(
-      'SELECT IFNULL(telefone1, 0) telefone1, IFNULL(telefone2, 0) telefone2, email FROM leads where (id = ?) and (dealer = ?)',
+      'SELECT IFNULL(telefone1, 0) as telefone1, IFNULL(telefone2, 0) as telefone2, IFNULL(email, "a") as email FROM leads where (id = ?) and (dealer = ?)',
       [req.body.lead, req.body.dealer]
     );
     await connection1.end();
@@ -247,12 +250,12 @@ exports.enviarEmail = async (req, res) => {
     const anexosNodemailer = []; // anexos no formato que vou enviar para o nodemailer
 
     if (anexosEnviados !== '') {
-      const anexos_enviados_array = req.body.anexos.split(';');
+      const anexos_enviados_array = req.body.anexos.split(';==;');
 
       for (let index = 0; index < anexos_enviados_array.length - 1; index++) {
         const anexoNodemailer = [];
         anexoNodemailer['filename'] = anexos_enviados_array[index].split('/').pop();
-        anexoNodemailer['path'] = anexos_enviados_array[index];
+        anexoNodemailer['path'] = anexos_enviados_array[index].replace('https://files.amaro.com.br/', 'C:/Server-Web/Node/rocket-sales/public/');
 
         anexosNodemailer.push(anexoNodemailer);
 

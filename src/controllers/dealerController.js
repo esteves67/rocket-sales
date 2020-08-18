@@ -198,7 +198,7 @@ exports.editar = async (req, res) => {
           dealer.whatsapp1,
           dealer.whatsapp2,
           dealer.whatsapp3,
-          dealer.email,
+          dealer.email.trim(),
           dealer.dealer,
         ]
       );
