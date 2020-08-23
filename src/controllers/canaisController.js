@@ -350,7 +350,7 @@ exports.mailgun = async (req, res) => {
 
     for (let index = 0; index < req.files.length; index++) {
       const file = req.files[index];
-      const filename = `${file.destination}/${file.filename}`;
+      const filename = `${file.destination}${file.filename}`;
       filenames = filenames + file.originalname + ':==:' + filename + ';==;';
 
       const connection1 = await mysql.createConnection(dbConfig);
@@ -445,7 +445,7 @@ exports.file = async (req, res) => {
     ]);
     await connection1.end();
 
-    res.download(`./uploads/${req.params.filename}`, result[0].nomeoriginal);
+    res.download(`${process.env.STORAGE}${req.params.filename}`, result[0].nomeoriginal);
   } catch (err) {
     tratamentoErros(req, res, err);
   }
