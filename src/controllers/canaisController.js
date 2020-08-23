@@ -70,7 +70,7 @@ exports.enviarWhatsApp = async (req, res) => {
       status: 'ok',
     });
   } catch (err) {
-    tratamentoErros(req, res, err)
+    tratamentoErros(req, res, err);
     return res.status(400).send({
       status: 'erro',
       tipo: 'Erro de Servidor',
@@ -255,7 +255,10 @@ exports.enviarEmail = async (req, res) => {
       for (let index = 0; index < anexos_enviados_array.length - 1; index++) {
         const anexoNodemailer = [];
         anexoNodemailer['filename'] = anexos_enviados_array[index].split('/').pop();
-        anexoNodemailer['path'] = anexos_enviados_array[index].replace(process.env.STORAGE_HTTP, process.env.STORAGE);
+        anexoNodemailer['path'] = anexos_enviados_array[index].replace(
+          process.env.STORAGE_HTTP,
+          process.env.STORAGE
+        );
 
         anexosNodemailer.push(anexoNodemailer);
 
@@ -338,5 +341,112 @@ exports.uploadAnexoEmail = async (req, res) => {
       tipo: 'Erro de Servidor',
       mensagem: 'Ocorreu um erro ao enviar o e-mail.',
     });
+  }
+};
+
+exports.mailgun = async (req, res) => {
+  try {
+    let filenames = '';
+
+    for (let index = 0; index < req.files.length; index++) {
+      const file = req.files[index];
+      const filename = `${file.destination}/${file.filename}`;
+      filenames = filenames + file.originalname + ':==:' + filename + ';==;';
+
+      const connection1 = await mysql.createConnection(dbConfig);
+      await connection1.query('INSERT INTO arquivos (nome, nomeoriginal) values (?, ?)', [
+        file.filename,
+        file.originalname,
+      ]);
+      await connection1.end();
+    }
+
+    const connection0 = await mysql.createConnection(dbConfig);
+    await connection0.query('UPDATE leads SET agendamentoContato = NOW() WHERE (email = ?)', [
+      req.body.sender,
+    ]);
+    await connection0.end();
+
+    const connection1 = await mysql.createConnection(dbConfig);
+    await connection1.query(
+      'INSERT INTO emails (remetente, email, html, emailcc, anexo, data, contentIdMap, direcao, assunto) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [
+        req.body.sender,
+        req.body.recipient,
+        req.body['stripped-html'],
+        req.body.subject,
+        filenames.split(process.env.STORAGE).join(process.env.STORAGE_HTTP),
+        new Date(req.body.timestamp * 1000),
+        req.body['content-id-map'],
+        'in',
+        req.body.subject,
+      ]
+    );
+    await connection1.end();
+
+    res.send('ok');
+  } catch (err) {
+    const html = `
+        <!doctype html>
+        <html lang="pr-br">
+        <head>
+            <title>Hooks Mailgun</title>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+            </head>
+        <body>
+            <p>Você está recebendo este e-mail pois o processo de receber o retorno da Mailgun gerou um erro.</p>
+            <p>headers: ${JSON.stringify(req.headers)}</p>
+            <p>body: ${JSON.stringify(req.body)}</p>
+            <p>error: ${err.message}/p>
+        </body>
+        </html>`;
+
+    await transporter.sendMail({
+      from: '"Robô Rocket Sales" <robot@rocketsales.app>',
+      to: 'claudio@amaro.com.br',
+      subject: 'Erro hooks Mailgun',
+      html,
+    });
+
+    tratamentoErros(req, res, err);
+
+    res.send('ok');
+  }
+
+  // ('From', u'Ev Kontsevoy '),
+  // ('sender', u'ev@mailgunhq.com'),
+  // ('To', u'Awesome Bot '),
+  // ('attachment-count', u'1'),
+  // ('Subject', u'Re: Your application')])
+  // ('stripped-text', u'My application is attached.nThanks.'),
+  // ('stripped-html', u'HTML version of stripped-text'),
+  // ('body-html', u'[full html version of the message]'),
+  // ('body-plain', u'[full text version of the message]'),
+  // ('stripped-signature', u'-- nEv Kontsevoy,nCo-founder and CEO of Mailgun.net  - the emailnplatform for developers.'),
+  // ('recipient', u'bot@hello.mailgun.org'),
+  // ('subject', u'Re: Your application'),
+  // ('timestamp', u'1320695889'),
+  // ('signature', u'b8869291bd72f1ad38238429c370cb13a109eab01681a31b1f4a2751df1e3379'),
+  // ('token', u'9ysf1gfmskxxsp1zqwpwrqf2qd4ctdmi5e$k-ajx$x0h846u88'),
+  // ('In-Reply-To', u'Message-Id-of-original-message'),
+  // ('Date', u'Mon, 7 Nov 2011 11:58:06 -0800'),
+  // ('Message-Id', u'message-id-goes-here'),
+  // ('X-Originating-Ip', u'[216.156.80.78]'),
+  // # NOTE: ALL message fields are parsed and pasted. If some fields (like "Cc") are
+  // # missing here it only means they were absent from the message.
+};
+
+exports.file = async (req, res) => {
+  try {
+    const connection1 = await mysql.createConnection(dbConfig);
+    const [result] = await connection1.query('SELECT * FROM arquivos WHERE (nome = ?)', [
+      req.params.filename,
+    ]);
+    await connection1.end();
+
+    res.download(`./uploads/${req.params.filename}`, result[0].nomeoriginal);
+  } catch (err) {
+    tratamentoErros(req, res, err);
   }
 };
