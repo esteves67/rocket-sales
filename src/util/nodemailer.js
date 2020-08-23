@@ -15,7 +15,11 @@ const transporter = nodemailer.createTransport({
 transporter.use(
   'compile',
   hbs({
-    viewPath: path.join(__dirname, '..', 'mailTemplates'),
+    viewEngine: {
+      partialsDir: path.join(__dirname, '..', 'mailTemplates/layouts'),
+      layoutsDir: path.join(__dirname, '..', 'mailTemplates/layouts'),
+    },
+    viewPath: path.join(__dirname, '..', 'mailTemplates')
   })
 );
 

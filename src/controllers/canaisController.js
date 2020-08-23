@@ -255,7 +255,7 @@ exports.enviarEmail = async (req, res) => {
       for (let index = 0; index < anexos_enviados_array.length - 1; index++) {
         const anexoNodemailer = [];
         anexoNodemailer['filename'] = anexos_enviados_array[index].split('/').pop();
-        anexoNodemailer['path'] = anexos_enviados_array[index].replace('https://files.amaro.com.br/', 'C:/Server-Web/Node/rocket-sales/public/');
+        anexoNodemailer['path'] = anexos_enviados_array[index].replace(process.env.STORAGE_HTTP, process.env.STORAGE);
 
         anexosNodemailer.push(anexoNodemailer);
 
@@ -316,11 +316,11 @@ exports.uploadAnexoEmail = async (req, res) => {
     fileKeys.forEach((element) => {
       arquivos.push([
         req.files[element].name.replace(' ', ''),
-        `https://files.amaro.com.br/${id}_${req.files[element].name.replace(' ', '')}`,
+        `${process.env.STORAGE_HTTP}${id}_${req.files[element].name.replace(' ', '')}`,
       ]);
 
       req.files[element].mv(
-        `C:/Server-Web/Node/rocket-sales/public/${id}_${req.files[element].name.replace(' ', '')}`,
+        `${process.env.STORAGE}${id}_${req.files[element].name.replace(' ', '')}`,
         (err) => {
           if (err) console.log(err);
         }
