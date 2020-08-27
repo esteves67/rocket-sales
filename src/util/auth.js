@@ -48,30 +48,6 @@ const authDealer = async (req, res, next) => {
     req.allow.AlterarDadosLoja = user[0].allow_AlterarDadosLoja;
     req.allow.AlterarPermissaoUsuarios = user[0].allow_AlterarPermissaoUsuarios;
     req.allow.AlterarVendedor = user[0].allow_AlterarVendedor;
-
-    if (user[0].email !== null && user[0].email !== '') {
-      req.dealerEmail = user[0].email + '@rocketsales.amaro.com.br';
-    } else {
-      req.dealerEmail = 'a';
-    }
-
-    if (user[0].whatsapp1 !== null && user[0].whatsapp1 !== '') {
-      req.dealerWhatsapp1 = '55' + user[0].whatsapp1.replace('(', '').replace(')', '').replace('-', '').replace(' ', '');
-    } else {
-      req.dealerWhatsapp1 = '1';
-    }
-
-    if (user[0].whatsapp2 !== null && user[0].whatsapp2 !== '') {
-      req.dealerWhatsapp2 = '55' + user[0].whatsapp2.replace('(', '').replace(')', '').replace('-', '').replace(' ', '');
-    } else {
-      req.dealerWhatsapp2 = '1';
-    }
-
-    if (user[0].whatsapp3 !== null && user[0].whatsapp3 !== '') {
-      req.dealerWhatsapp3 = '55' + user[0].whatsapp3.replace('(', '').replace(')', '').replace('-', '').replace(' ', '');
-    } else {
-      req.dealerWhatsapp3 = '1';
-    }
   }
 
   next();

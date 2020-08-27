@@ -33,6 +33,7 @@ exports.cadastro = async (req, res) => {
       observacao,
       dealer,
       origem,
+      departamento
     } = req.body;
 
     if (
@@ -45,6 +46,7 @@ exports.cadastro = async (req, res) => {
       horaEntrada === undefined ||
       origem === undefined ||
       observacao === undefined ||
+      departamento === undefined ||
       dealer === undefined
     ) {
       return res.status(400).send({
@@ -117,10 +119,10 @@ exports.cadastro = async (req, res) => {
     const [
       result,
     ] = await connection.query(
-      'INSERT INTO leads (nome, telefone1, email, veiculoInteresse,  vendedor, comoconheceu, horaEntrada, observacao, dealer, origem, createdBy) VALUES (?, ?, ?, ?, ?, ?, ?, ? , ?, ?, ?);',
+      'INSERT INTO leads (nome, telefone1, email, veiculoInteresse,  vendedor, comoconheceu, horaEntrada, observacao, dealer, origem, createdBy, departamento) VALUES (?, ?, ?, ?, ?, ?, ?, ? , ?, ?, ?, ?);',
       [
         nome,
-        telefone1,
+        telefone1.replace(/\D/g, ''),
         email,
         veiculoInteresse,
         vendedor,
@@ -130,6 +132,7 @@ exports.cadastro = async (req, res) => {
         dealer,
         origem,
         req.userId,
+        departamento
       ]
     );
     await connection.end();
@@ -166,6 +169,7 @@ exports.atualizar = async (req, res) => {
       comoconheceu,
       observacao,
       dealer,
+      departamento
     } = req.body;
 
     if (
@@ -180,6 +184,7 @@ exports.atualizar = async (req, res) => {
       veiculoInteresse === undefined ||
       vendedor === undefined ||
       comoconheceu === undefined ||
+      departamento === undefined ||
       observacao === undefined
     ) {
       return res.status(400).send({
@@ -244,13 +249,14 @@ exports.atualizar = async (req, res) => {
 
     const connection = await mysql.createConnection(dbConfig);
     await connection.query(
-      'UPDATE leads SET nome = ?, cpf = ?, dataNascimento = ?, telefone1 = ?, telefone2 = ?, email = ?, veiculoInteresse = ?, vendedor = ?, observacao = ?, comoconheceu = ? WHERE id = ? and dealer = ?;',
+      `UPDATE leads SET nome = ?, departamento = ?, cpf = ?, dataNascimento = ?, telefone1 = NULLIF(?, ''), telefone2 = NULLIF(?, ''), email = ?, veiculoInteresse = ?, vendedor = ?, observacao = ?, comoconheceu = ? WHERE id = ? and dealer = ?;`,
       [
         nome,
+        departamento,
         cpf,
         dataNascimento1,
-        telefone1,
-        telefone2,
+        telefone1.replace(/\D/g, ''),
+        telefone2.replace(/\D/g, ''),
         email,
         veiculoInteresse,
         vendedor,
@@ -461,7 +467,7 @@ exports.listar = async (req, res) => {
     const [
       leads,
     ] = await connection.query(
-      `SELECT leads.id, origem, leads.nome, user.nome as vendedor, veiculoInteresse, DateTimeFormatPtBr(horaEntrada) as horaEntrada, DateFormatPtBr(horaEntrada) as dataEntrada, DateTimeFormatPtBr(horaSaida) as horaSaida, statusnegociacao, numeropedido, motivodesistencia, testdrive, testdrivemotivo, testdrivehora, DateTimeFormatPtBr(agendamentoContato) agendamentoContato, IF(agendamentoContato < NOW(), IF(agendamentoContato < DATE_ADD(NOW(), INTERVAL - 2 HOUR), 'Ação Pendente Atrasada', 'Ação Pendente'), '') acao FROM leads LEFT JOIN user ON leads.vendedor = user.id WHERE dealer = ? and DATE(horaEntrada) BETWEEN ? AND ? ${SQLstatus} ${SQLvendedor} ${SQLorigem} ORDER BY CASE WHEN statusnegociacao = 'novo' THEN 5 WHEN statusnegociacao in ('sucesso', 'insucesso') THEN 0 ELSE 2 END DESC, agendamentoContato`,
+      `SELECT leads.id, origem, departamento, leads.nome, user.nome as vendedor, veiculoInteresse, DateTimeFormatPtBr(horaEntrada) as horaEntrada, DateFormatPtBr(horaEntrada) as dataEntrada, DateTimeFormatPtBr(horaSaida) as horaSaida, statusnegociacao, numeropedido, motivodesistencia, testdrive, testdrivemotivo, testdrivehora, DateTimeFormatPtBr(agendamentoContato) agendamentoContato, IF(agendamentoContato < NOW(), IF(agendamentoContato < DATE_ADD(NOW(), INTERVAL - 2 HOUR), 'Ação Pendente Atrasada', 'Ação Pendente'), '') acao FROM leads LEFT JOIN user ON leads.vendedor = user.id WHERE dealer = ? and DATE(horaEntrada) BETWEEN ? AND ? ${SQLstatus} ${SQLvendedor} ${SQLorigem} ORDER BY CASE WHEN statusnegociacao = 'novo' THEN 5 WHEN statusnegociacao in ('sucesso', 'insucesso') THEN 0 ELSE 2 END DESC, agendamentoContato`,
       [dealer, dataInicial1, dataFinal1]
     );
     await connection.end();
@@ -482,7 +488,7 @@ exports.listar = async (req, res) => {
 
 exports.alterarStatus = async (req, res) => {
   try {
-    const { dealer, lead, status, numeroPedido, motivoDesistencia, agendamentoContato } = req.body;
+    const { dealer, lead, status, numeroPedido, motivoDesistencia, agendamentoContato, observacao } = req.body;
 
     if (
       dealer === undefined ||
@@ -490,6 +496,7 @@ exports.alterarStatus = async (req, res) => {
       status === undefined ||
       numeroPedido === undefined ||
       motivoDesistencia === undefined ||
+      observacao === undefined ||
       agendamentoContato === undefined
     ) {
       return res.status(400).send({
@@ -539,7 +546,7 @@ exports.alterarStatus = async (req, res) => {
       req.userId,
       dealer,
       lead,
-      null
+      observacao
     );
 
     return res.status(200).send({
@@ -572,7 +579,7 @@ exports.selecionarLead = async (req, res) => {
     const [
       dadoslead,
     ] = await connection.query(
-      'SELECT  leads.nome, origem, cpf, leads.dataNascimento, leads.telefone1, leads.telefone2, leads.email, veiculoInteresse, user.id as vendedor,  leads.comoconheceu, leads.observacao, leads.horaEntrada, user.nome as nomeVendedor FROM leads left JOIN user ON user.id = leads.vendedor WHERE leads.dealer = ? And leads.id = ? ',
+      'SELECT  leads.nome, departamento, origem, cpf, leads.dataNascimento, leads.telefone1, leads.telefone2, leads.email, veiculoInteresse, user.id as vendedor,  leads.comoconheceu, leads.observacao, leads.horaEntrada, user.nome as nomeVendedor FROM leads left JOIN user ON user.id = leads.vendedor WHERE leads.dealer = ? And leads.id = ? ',
       [dealer, lead]
     );
     await connection.end();

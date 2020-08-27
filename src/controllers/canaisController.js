@@ -32,110 +32,6 @@ async function processarUpload(files, dealer, lead, user) {
   return ret_files;
 }
 
-exports.enviarWhatsApp = async (req, res) => {
-  const instancia = 'instance165454';
-  const key = '7dlzh5j2yg4pi1lv';
-  const nro_loja = '1135113707';
-
-  if (
-    req.body.dealer === undefined ||
-    req.body.lead === undefined ||
-    req.body.tipo === undefined ||
-    req.body.celular === undefined ||
-    req.body.arquivos === undefined ||
-    req.body.mensagem === undefined
-  ) {
-    return res.status(400).send({
-      status: 'erro',
-      tipo: 'Falha na Chamada',
-      mensagem: 'Requisição inválida.',
-    });
-  }
-
-  try {
-    if (req.body.tipo === 'mensagem') {
-      const result = await axios.post(
-        `https://eu153.chat-api.com/${instancia}/sendMessage?token=${key}`,
-        {
-          phone: `55${req.body.celular}`,
-          body: req.body.mensagem,
-        },
-        { headers: { 'Content-Type': 'application/json' } }
-      );
-
-      console.log(result);
-
-      const connection3 = await mysql.createConnection(dbConfig);
-      await connection3.query(
-        'INSERT INTO whatsapp (idDealer, idlead, idUser, direcao, instancia, nro_loja, nro_cliente, mensagem, status, status_response, queuenumber, chatId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [
-          req.body.dealer,
-          req.body.lead,
-          req.userId,
-          'out',
-          instancia,
-          nro_loja,
-          req.body.celular,
-          req.body.mensagem,
-          'Enviada',
-          JSON.stringify(result.data),
-          result.data.queueNumber,
-          result.data.id,
-        ]
-      );
-      await connection3.end();
-    } else if (req.body.tipo === 'arquivos') {
-      const { arquivos } = req.body;
-
-      for (let index = 0; index < arquivos.length; index++) {
-        const arquivo = arquivos[index];
-
-        const result = await axios.post(
-          `https://eu153.chat-api.com/${instancia}/sendFile?token=${key}`,
-          {
-            phone: `55${req.body.celular}`,
-            //body: arquivo.caminho + '.' + arquivo.nome.split('.').pop(),
-            body: arquivo.caminho,
-            filename: arquivo.nome,
-          },
-          { headers: { 'Content-Type': 'application/json' } }
-        );
-
-        const connection3 = await mysql.createConnection(dbConfig);
-        await connection3.query(
-          'INSERT INTO whatsapp (idDealer, idlead, idUser, direcao, instancia, nro_loja, nro_cliente, mensagem, status, status_response, queuenumber, chatId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-          [
-            req.body.dealer,
-            req.body.lead,
-            req.userId,
-            'out',
-            instancia,
-            nro_loja,
-            req.body.celular,
-            arquivo.caminho,
-            'Enviada',
-            JSON.stringify(result.data),
-            result.data.queueNumber,
-            result.data.id,
-          ]
-        );
-        await connection3.end();
-      }
-    }
-
-    return res.status(200).send({
-      status: 'ok',
-    });
-  } catch (err) {
-    tratamentoErros(req, res, err);
-    return res.status(400).send({
-      status: 'erro',
-      tipo: 'Erro de Servidor',
-      mensagem: 'Erro ao enviar mensagem.',
-    });
-  }
-};
-
 exports.listarMensagens = async (req, res) => {
   if (req.body.dealer === undefined || req.body.lead === undefined) {
     return res.status(400).send({
@@ -150,49 +46,95 @@ exports.listarMensagens = async (req, res) => {
     const [
       result1,
     ] = await connection1.query(
-      'SELECT IFNULL(telefone1, 0) as telefone1, IFNULL(telefone2, 0) as telefone2, IFNULL(email, 0) as email FROM leads where (id = ?) and (dealer = ?)',
+      'SELECT IFNULL(telefone1, 0) as telefone1, IFNULL(telefone2, 0) as telefone2, IFNULL(email, 0) as email, departamento FROM leads where (id = ?) and (dealer = ?)',
       [req.body.lead, req.body.dealer]
     );
     await connection1.end();
 
     const connection = await mysql.createConnection(dbConfig);
     const [resultEm] = await connection.query(
-      `SELECT user.nome nomeUsuario, emails.direcao, emails.email_loja, emails.email, emails.assunto, emails.html, emails.anexo, emails.contentIdMap, emails.data, emails.status
-      FROM emails left join user on emails.idUser = user.id
-      WHERE ((emails.idlead = ?) OR (emails.email = ?)) AND (emails.iddealer = ?)
-      union
-      select user.nome nomeUsuario, whatsapp.direcao, whatsapp.nro_loja, whatsapp.nro_cliente, '' assunto, whatsapp.mensagem, '' anexo, '' contentIdMap, whatsapp.data, whatsapp.status
-      from whatsapp left join user on whatsapp.idUser = user.id
-      WHERE ((whatsapp.idlead = ?) OR (whatsapp.nro_cliente = ?) OR (whatsapp.nro_cliente = ?)) AND (whatsapp.iddealer = ?)
-      order by data`,
+      `SELECT user.nome nomeUsuario, 'E-mail' as tipo, emails.direcao, emails.email_loja endereco_loja, emails.email endereco_cliente, emails.assunto, emails.html mensagem, emails.anexo, emails.contentIdMap, DateTimeFormatPtBr(emails.data) data, emails.status
+      FROM
+        emails left join user on emails.idUser = user.id
+      WHERE
+        (
+          (emails.direcao = 'out') AND
+          (emails.iddealer = ?) AND
+          (emails.idlead = ?)
+        ) OR
+        (
+          (emails.direcao = 'in') AND
+          (emails.email = ?) AND
+          (emails.email_loja IN (
+            SELECT endereco
+            FROM dealercanais
+            WHERE
+              (dealer = ?) and
+              (ativo = 1) and
+              (departamento = ?) and
+              (tipo = 'E-mail')
+          ))
+        )
+        UNION
+        SELECT user.nome, 'WhatsApp', whatsapp.direcao, whatsapp.nro_loja, whatsapp.nro_cliente, '' assunto, whatsapp.mensagem, '' anexo, '' contentIdMap, DateTimeFormatPtBr(whatsapp.data) data, whatsapp.status
+        FROM
+          whatsapp left join user on whatsapp.idUser = user.id
+        WHERE
+        (
+          (whatsapp.direcao = 'out') AND
+          (whatsapp.iddealer = ?) AND
+          (whatsapp.idlead = ?)
+        ) OR
+        (
+          (whatsapp.direcao = 'in') AND
+          (whatsapp.nro_cliente = ? or whatsapp.nro_cliente = ?) AND
+          (whatsapp.instancia IN (
+            SELECT chatapi_instance
+            FROM dealercanais
+            WHERE
+              (dealer = ?) and
+              (ativo = 1) and
+              (departamento = ?) and
+              (tipo = 'WhatsApp')
+          ))
+        )
+        ORDER BY data
+        `,
       [
+
+        req.body.dealer,
         req.body.lead,
         result1[0].email,
+        req.body.dealer,
+        result1[0].departamento,
         req.body.dealer,
         req.body.lead,
         result1[0].telefone1,
         result1[0].telefone2,
         req.body.dealer,
+        result1[0].departamento,
       ]
     );
     await connection.end();
 
     for (let i = 0; i < resultEm.length; i++) {
-      const anexos = JSON.parse(resultEm[i].anexo);
-      const contentIdMap = JSON.parse(resultEm[i].contentIdMap);
+      try {
+        const anexos = JSON.parse(resultEm[i].anexo);
+        const contentIdMap = JSON.parse(resultEm[i].contentIdMap);
 
-      if (anexos != null && contentIdMap != null) {
-        for (let k = 0; k < Object.entries(contentIdMap).length; k++) {
-          const key = Object.entries(contentIdMap)[k][0];
-          const cid = `cid:${key.replace('<', '').replace('>', '')}`;
-          const attachment = contentIdMap[key].replace('attachment-', '') - 1;
-          if (resultEm[i].html.search(cid) > 0) {
-            resultEm[i].html = resultEm[i].html.replace(cid, anexos[attachment]['caminho']);
-            anexos.splice(attachment);
+        if (anexos != null && contentIdMap != null) {
+          for (let k = 0; k < Object.entries(contentIdMap).length; k++) {
+            const key = Object.entries(contentIdMap)[k][0];
+            const cid = `cid:${key.replace('<', '').replace('>', '')}`;
+            const attachment = contentIdMap[key].replace('attachment-', '') - 1;
+            if (resultEm[i].html.search(cid) > 0) {
+              resultEm[i].html = resultEm[i].html.replace(cid, anexos[attachment]['caminho']);
+              anexos.splice(attachment);
+            }
           }
         }
-      }
-      resultEm[i].anexo = anexos;
+        resultEm[i].anexo = anexos;
+      } catch (error) {}
     }
 
     return res.status(200).send({
@@ -353,29 +295,194 @@ exports.mailgun = async (req, res) => {
   // # missing here it only means they were absent from the message.
 };
 
+exports.enviarWhatsApp = async (req, res) => {
+  if (
+    req.body.dealer === undefined ||
+    req.body.lead === undefined ||
+    req.body.tipo === undefined ||
+    req.body.celular === undefined ||
+    req.body.arquivos === undefined ||
+    req.body.mensagem === undefined
+  ) {
+    return res.status(400).send({
+      status: 'erro',
+      tipo: 'Falha na Chamada',
+      mensagem: 'Requisição inválida.',
+    });
+  }
+
+  const connection0 = await mysql.createConnection(dbConfig);
+  const [result0] = await connection0.query(
+    `
+      SELECT departamento FROM leads WHERE (id = ?) and (dealer = ?)
+      `,
+    [req.body.lead, req.body.dealer]
+  );
+  await connection0.end();
+
+  const connection1 = await mysql.createConnection(dbConfig);
+  const [result1] = await connection1.query(
+    `
+        SELECT chatapi_instance, chatapi_token, endereco
+        FROM dealercanais
+        WHERE (dealer = ?) and (departamento = ?) and (tipo = 'WhatsApp') and (ativo = 1)
+        LIMIT 1
+      `,
+    [req.body.dealer, result0[0].departamento]
+  );
+  await connection1.end();
+
+  try {
+    if (req.body.tipo === 'texto') {
+      let status = 'Erro';
+      let result = {};
+      let queueNumber = null;
+      let id = null;
+
+      try {
+        result = await axios.post(
+          `https://eu153.chat-api.com/instance${result1[0].chatapi_instance}/sendMessage?token=${result1[0].chatapi_token}`,
+          {
+            phone: `55${req.body.celular}`,
+            body: req.body.mensagem,
+          },
+          { headers: { 'Content-Type': 'application/json' } }
+        );
+
+        queueNumber = result.data.queueNumber;
+        id = result.data.id;
+
+        if (result.data.sent == true) {
+          status = 'Enviando';
+        }
+      } catch (err) {}
+
+      const connection3 = await mysql.createConnection(dbConfig);
+      await connection3.query(
+        'INSERT INTO whatsapp (idDealer, idlead, idUser, direcao, instancia, nro_loja, nro_cliente, mensagem, status, status_response, queuenumber, chatId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [
+          req.body.dealer,
+          req.body.lead,
+          req.userId,
+          'out',
+          result1[0].chatapi_instance,
+          result1[0].endereco,
+          req.body.celular,
+          req.body.mensagem,
+          status,
+          JSON.stringify(result.data),
+          queueNumber,
+          id,
+        ]
+      );
+      await connection3.end();
+    } else if (req.body.tipo === 'arquivo') {
+      const { arquivos } = req.body;
+
+      for (let index = 0; index < arquivos.length; index++) {
+        const arquivo = arquivos[index];
+
+        let status = 'Erro';
+        let result = {};
+        let queueNumber = null;
+        let id = null;
+
+        try {
+          result = await axios.post(
+            `https://eu153.chat-api.com/instance${result1[0].chatapi_instance}/sendFile?token=${result1[0].chatapi_token}`,
+            {
+              phone: `55${req.body.celular}`,
+              body: arquivo.caminho,
+              filename: arquivo.nome,
+            },
+            { headers: { 'Content-Type': 'application/json' } }
+          );
+
+          queueNumber = result.data.queueNumber;
+          id = result.data.id;
+
+          if (result.data.sent == true) {
+            status = 'Enviando';
+          }
+        } catch (err) {}
+
+        const connection3 = await mysql.createConnection(dbConfig);
+        await connection3.query(
+          'INSERT INTO whatsapp (idDealer, idlead, idUser, direcao, instancia, nro_loja, nro_cliente, mensagem, status, status_response, queuenumber, chatId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          [
+            req.body.dealer,
+            req.body.lead,
+            req.userId,
+            'out',
+            result1[0].chatapi_instance,
+            result1[0].endereco,
+            req.body.celular,
+            arquivo.caminho,
+            status,
+            JSON.stringify(result.data),
+            queueNumber,
+            id,
+          ]
+        );
+        await connection3.end();
+      }
+    }
+
+    return res.status(200).send({
+      status: 'ok',
+    });
+  } catch (err) {
+    tratamentoErros(req, res, err);
+    return res.status(400).send({
+      status: 'erro',
+      tipo: 'Erro de Servidor',
+      mensagem: 'Erro ao enviar mensagem.',
+    });
+  }
+};
+
 exports.chatapi = async (req, res) => {
   try {
     if (req.body.messages !== undefined) {
-      if (req.body.messages[0].fromMe.toString() != 'true') {
-        const nro_loja = '1135113707';
+      if (req.body.messages[0].fromMe.toString() !== 'true') {
         const celular = req.body.messages[0].author.split('@')[0].slice(2);
+        const instancia = req.body.instanceId;
 
         const connection0 = await mysql.createConnection(dbConfig);
         await connection0.query(
-          'UPDATE leads SET agendamentoContato = NOW() WHERE (digits(telefone1) = ? or digits(telefone2) = ?) AND (dealer = ?)',
-          [celular, celular, 10] // TODO: pegar o codigo do dealer de acordo com a tabela dealerCanais
+          `
+          UPDATE leads
+	          SET agendamentoContato = NOW()
+          WHERE
+            (telefone1 = ? or telefone2 = ?) AND
+            (dealer in (
+              SELECT dealer
+              FROM dealercanais
+              WHERE (chatapi_instance = ?)
+            ))`,
+          [celular, celular, instancia]
         );
         await connection0.end();
 
+        const connection1 = await mysql.createConnection(dbConfig);
+        const [result1] = await connection1.query(
+          `
+              SELECT endereco
+              FROM dealercanais
+              WHERE (chatapi_instance = ?)
+              LIMIT 1
+            `,
+          [instancia]
+        );
+        await connection1.end();
+
         const connection3 = await mysql.createConnection(dbConfig);
-        const [
-          result,
-        ] = await connection3.query(
+        await connection3.query(
           'INSERT INTO whatsapp (direcao, instancia, nro_loja, nro_cliente, mensagem, emResposta, status, status_response, queuenumber, chatId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
           [
             'in',
-            'instance' + req.body.instanceId.toString(),
-            nro_loja,
+            req.body.instanceId,
+            result1[0].endereco,
             celular,
             req.body.messages[0].body,
             req.body.messages[0].quotedMsgBody,
@@ -388,10 +495,28 @@ exports.chatapi = async (req, res) => {
         await connection3.end();
       }
     } else if (req.body.ack !== undefined) {
-      const messageNumber = req.body.ack[0].messageNumber;
+      let status = null;
+
+      if (req.body.ack[0].status == 'sent') {
+        status = 'Enviada';
+      } else if (req.body.ack[0].status == 'delivered') {
+        status = 'Entregue';
+      } else if (req.body.ack[0].status == 'viewed') {
+        status = 'Lida';
+      } else {
+        res.send('ok');
+        return;
+      }
+
+      const connection3 = await mysql.createConnection(dbConfig);
+      await connection3.query(
+        'UPDATE whatsapp set status = ? where instancia = ? and queueNumber = ?',
+        [status, req.body.instanceId, req.body.ack[0].queueNumber]
+      );
+      await connection3.end();
     }
 
-    res.send('OK');
+    res.send('ok');
   } catch (err) {
     const html = `
         <!doctype html>
@@ -420,28 +545,6 @@ exports.chatapi = async (req, res) => {
 
     res.send('ok');
   }
-
-  // ('From', u'Ev Kontsevoy '),
-  // ('sender', u'ev@mailgunhq.com'),
-  // ('To', u'Awesome Bot '),
-  // ('attachment-count', u'1'),
-  // ('Subject', u'Re: Your application')])
-  // ('stripped-text', u'My application is attached.nThanks.'),
-  // ('stripped-html', u'HTML version of stripped-text'),
-  // ('body-html', u'[full html version of the message]'),
-  // ('body-plain', u'[full text version of the message]'),
-  // ('stripped-signature', u'-- nEv Kontsevoy,nCo-founder and CEO of Mailgun.net  - the emailnplatform for developers.'),
-  // ('recipient', u'bot@hello.mailgun.org'),
-  // ('subject', u'Re: Your application'),
-  // ('timestamp', u'1320695889'),
-  // ('signature', u'b8869291bd72f1ad38238429c370cb13a109eab01681a31b1f4a2751df1e3379'),
-  // ('token', u'9ysf1gfmskxxsp1zqwpwrqf2qd4ctdmi5e$k-ajx$x0h846u88'),
-  // ('In-Reply-To', u'Message-Id-of-original-message'),
-  // ('Date', u'Mon, 7 Nov 2011 11:58:06 -0800'),
-  // ('Message-Id', u'message-id-goes-here'),
-  // ('X-Originating-Ip', u'[216.156.80.78]'),
-  // # NOTE: ALL message fields are parsed and pasted. If some fields (like "Cc") are
-  // # missing here it only means they were absent from the message.
 };
 
 exports.upload = async (req, res) => {
@@ -494,6 +597,67 @@ exports.file = async (req, res) => {
       status: 'erro',
       tipo: 'Erro de Servidor',
       mensagem: 'Ocorreu um erro ao realizar o download do arquivo.',
+    });
+  }
+};
+
+exports.listarCanais = async (req, res) => {
+  if (req.body.dealer === undefined || req.body.lead === undefined) {
+    return res.status(400).send({
+      status: 'erro',
+      tipo: 'Falha na Chamada',
+      mensagem: 'Requisição inválida.',
+    });
+  }
+
+  try {
+    const connection1 = await mysql.createConnection(dbConfig);
+    const [result] = await connection1.query(
+      `SELECT
+      dealercanais.id,
+      dealercanais.tipo,
+      dealercanais.endereco remetente,
+      digits(telefone1) as destinataio
+    FROM leads inner join dealercanais on leads.dealer = dealercanais.dealer and leads.departamento = dealercanais.departamento
+    where (leads.id = ?) and (leads.dealer = ?) and (tipo = 'whatsapp') and (digits(telefone1) is not null)
+    union
+    SELECT
+      dealercanais.id,
+      dealercanais.tipo,
+      dealercanais.endereco remetente,
+      digits(telefone2) as destinataio
+    FROM leads inner join dealercanais on leads.dealer = dealercanais.dealer and leads.departamento = dealercanais.departamento
+    where (leads.id = ?) and (leads.dealer = ?) and (tipo = 'whatsapp') and (digits(telefone2) is not null)
+    union
+    SELECT
+      dealercanais.id,
+      dealercanais.tipo,
+      dealercanais.endereco remetente,
+      email as destinataio
+    FROM leads inner join dealercanais on leads.dealer = dealercanais.dealer and leads.departamento = dealercanais.departamento
+    where (leads.id = ?) and (leads.dealer = ?) and (tipo = 'e-mail') and (EMAIL is not null)
+    `,
+      [
+        req.body.lead,
+        req.body.dealer,
+        req.body.lead,
+        req.body.dealer,
+        req.body.lead,
+        req.body.dealer,
+      ]
+    );
+    await connection1.end();
+
+    return res.status(200).send({
+      status: 'ok',
+      result,
+    });
+  } catch (err) {
+    tratamentoErros(req, res, err);
+    return res.status(400).send({
+      status: 'erro',
+      tipo: 'Erro de Servidor',
+      mensagem: 'Ocorreu um erro ao listar os canais de comunicação com esse cliente.',
     });
   }
 };
