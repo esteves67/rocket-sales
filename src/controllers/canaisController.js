@@ -1,15 +1,10 @@
-const uuid = require('uuid');
-const sql = require('mssql');
+const util = require('util');
+const axios = require('axios');
+const fs = require('fs');
 const mysql = require('mysql2/promise');
 const transporter = require('../util/nodemailer');
 const tratamentoErros = require('../util/tratamentoErros');
-
-const config = {
-  user: process.env.SQL_DB_USER,
-  password: process.env.SQL_DB_PASS,
-  server: process.env.SQL_DB_HOST,
-  database: process.env.SQL_DB_NAME,
-};
+const { Console } = require('console');
 
 const dbConfig = {
   host: process.env.DB_HOST,
@@ -18,12 +13,36 @@ const dbConfig = {
   database: process.env.DB_NAME,
 };
 
+async function processarUpload(files, dealer, lead, user) {
+  const ret_files = [];
+
+  for (let index = 0; index < files.length; index++) {
+    const file = files[index];
+
+    const connection1 = await mysql.createConnection(dbConfig);
+    await connection1.query(
+      'INSERT INTO arquivos (idDealer, idLead, idUser, nome, nomeoriginal, mimetype, tamanho) values (?, ?, ?, ?, ?, ?, ?)',
+      [dealer, lead, user, file.filename, file.originalname, file.mimetype, file.size]
+    );
+    await connection1.end();
+
+    ret_files.push({ nome: file.originalname, caminho: process.env.STORAGE_HTTP + file.filename });
+  }
+
+  return ret_files;
+}
+
 exports.enviarWhatsApp = async (req, res) => {
+  const instancia = 'instance165454';
+  const key = '7dlzh5j2yg4pi1lv';
+  const nro_loja = '1135113707';
+
   if (
     req.body.dealer === undefined ||
     req.body.lead === undefined ||
     req.body.tipo === undefined ||
     req.body.celular === undefined ||
+    req.body.arquivos === undefined ||
     req.body.mensagem === undefined
   ) {
     return res.status(400).send({
@@ -34,36 +53,74 @@ exports.enviarWhatsApp = async (req, res) => {
   }
 
   try {
-    if (req.body.tipo === 'files') {
-      const files = req.body.mensagem.split(';==;');
+    if (req.body.tipo === 'mensagem') {
+      const result = await axios.post(
+        `https://eu153.chat-api.com/${instancia}/sendMessage?token=${key}`,
+        {
+          phone: `55${req.body.celular}`,
+          body: req.body.mensagem,
+        },
+        { headers: { 'Content-Type': 'application/json' } }
+      );
 
-      for (file of files) {
-        if (file !== '') {
-          const pool = await sql.connect(config);
+      console.log(result);
 
-          await pool
-            .request()
-            .input('remetente', sql.BigInt, req.dealerWhatsapp1)
-            .input('telefone', sql.BigInt, req.body.celular)
-            .input('mensagem', sql.VarChar, file)
-            .input('codEmpresa', sql.Int, 5)
-            .query(
-              'INSERT INTO WHATSAPP.MENSAGENS (REMETENTE, TELEFONE, MENSAGEM, CODEMPRESA) VALUES (@remetente, @telefone, @mensagem, @codEmpresa)'
-            );
-        }
-      }
-    } else {
-      const pool = await sql.connect(config);
+      const connection3 = await mysql.createConnection(dbConfig);
+      await connection3.query(
+        'INSERT INTO whatsapp (idDealer, idlead, idUser, direcao, instancia, nro_loja, nro_cliente, mensagem, status, status_response, queuenumber, chatId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [
+          req.body.dealer,
+          req.body.lead,
+          req.userId,
+          'out',
+          instancia,
+          nro_loja,
+          req.body.celular,
+          req.body.mensagem,
+          'Enviada',
+          JSON.stringify(result.data),
+          result.data.queueNumber,
+          result.data.id,
+        ]
+      );
+      await connection3.end();
+    } else if (req.body.tipo === 'arquivos') {
+      const { arquivos } = req.body;
 
-      await pool
-        .request()
-        .input('remetente', sql.BigInt, req.dealerWhatsapp1)
-        .input('telefone', sql.BigInt, req.body.celular)
-        .input('mensagem', sql.VarChar, req.body.mensagem)
-        .input('codEmpresa', sql.Int, 5)
-        .query(
-          'INSERT INTO WHATSAPP.MENSAGENS (REMETENTE, TELEFONE, MENSAGEM, CODEMPRESA) VALUES (@remetente, @telefone, @mensagem, @codEmpresa)'
+      for (let index = 0; index < arquivos.length; index++) {
+        const arquivo = arquivos[index];
+
+        const result = await axios.post(
+          `https://eu153.chat-api.com/${instancia}/sendFile?token=${key}`,
+          {
+            phone: `55${req.body.celular}`,
+            //body: arquivo.caminho + '.' + arquivo.nome.split('.').pop(),
+            body: arquivo.caminho,
+            filename: arquivo.nome,
+          },
+          { headers: { 'Content-Type': 'application/json' } }
         );
+
+        const connection3 = await mysql.createConnection(dbConfig);
+        await connection3.query(
+          'INSERT INTO whatsapp (idDealer, idlead, idUser, direcao, instancia, nro_loja, nro_cliente, mensagem, status, status_response, queuenumber, chatId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          [
+            req.body.dealer,
+            req.body.lead,
+            req.userId,
+            'out',
+            instancia,
+            nro_loja,
+            req.body.celular,
+            arquivo.caminho,
+            'Enviada',
+            JSON.stringify(result.data),
+            result.data.queueNumber,
+            result.data.id,
+          ]
+        );
+        await connection3.end();
+      }
     }
 
     return res.status(200).send({
@@ -93,86 +150,54 @@ exports.listarMensagens = async (req, res) => {
     const [
       result1,
     ] = await connection1.query(
-      'SELECT IFNULL(telefone1, 0) as telefone1, IFNULL(telefone2, 0) as telefone2, IFNULL(email, "a") as email FROM leads where (id = ?) and (dealer = ?)',
+      'SELECT IFNULL(telefone1, 0) as telefone1, IFNULL(telefone2, 0) as telefone2, IFNULL(email, 0) as email FROM leads where (id = ?) and (dealer = ?)',
       [req.body.lead, req.body.dealer]
     );
     await connection1.end();
 
     const connection = await mysql.createConnection(dbConfig);
-    const [
-      resultEm,
-    ] = await connection.query(
-      `SELECT id, remetente, html mensagem, DateTimeFormatPtBr(data) data, 'email' tipo, direcao, unix_timestamp(convert_tz(data, '+00:00', @@session.time_zone)) as timestamp, anexo, contentIdMap FROM emails WHERE ((remetente = ?) or (email = ?)) and ((remetente = ?) or (email = ?))`,
-      [result1[0].email, result1[0].email, req.dealerEmail, req.dealerEmail]
+    const [resultEm] = await connection.query(
+      `SELECT user.nome nomeUsuario, emails.direcao, emails.email_loja, emails.email, emails.assunto, emails.html, emails.anexo, emails.contentIdMap, emails.data, emails.status
+      FROM emails left join user on emails.idUser = user.id
+      WHERE ((emails.idlead = ?) OR (emails.email = ?)) AND (emails.iddealer = ?)
+      union
+      select user.nome nomeUsuario, whatsapp.direcao, whatsapp.nro_loja, whatsapp.nro_cliente, '' assunto, whatsapp.mensagem, '' anexo, '' contentIdMap, whatsapp.data, whatsapp.status
+      from whatsapp left join user on whatsapp.idUser = user.id
+      WHERE ((whatsapp.idlead = ?) OR (whatsapp.nro_cliente = ?) OR (whatsapp.nro_cliente = ?)) AND (whatsapp.iddealer = ?)
+      order by data`,
+      [
+        req.body.lead,
+        result1[0].email,
+        req.body.dealer,
+        req.body.lead,
+        result1[0].telefone1,
+        result1[0].telefone2,
+        req.body.dealer,
+      ]
     );
     await connection.end();
 
     for (let i = 0; i < resultEm.length; i++) {
-      if (resultEm[i].anexo != null && resultEm[i].contentIdMap != null) {
-        const anexo = resultEm[i].anexo.split(';==;');
-        const contentIdMap = JSON.parse(resultEm[i].contentIdMap);
+      const anexos = JSON.parse(resultEm[i].anexo);
+      const contentIdMap = JSON.parse(resultEm[i].contentIdMap);
 
+      if (anexos != null && contentIdMap != null) {
         for (let k = 0; k < Object.entries(contentIdMap).length; k++) {
           const key = Object.entries(contentIdMap)[k][0];
           const cid = `cid:${key.replace('<', '').replace('>', '')}`;
           const attachment = contentIdMap[key].replace('attachment-', '') - 1;
-
-          if (resultEm[i].mensagem.search(cid) > 0) {
-            resultEm[i].anexo = resultEm[i].anexo.replace(anexo[attachment] + ';==;', '');
-          }
-
-          resultEm[i].mensagem = resultEm[i].mensagem.replace(
-            cid,
-            anexo[attachment].split(':==:')[1]
-          );
-        }
-      }
-
-      const anexos = [];
-      if (resultEm[i].anexo != null) {
-        const anexo = resultEm[i].anexo.split(';==;');
-        for (let y = 0; y < anexo.length; y++) {
-          const arquivo = anexo[y].split(':==:')[0];
-
-          if (arquivo != '') {
-            const path = anexo[y].split(':==:')[1];
-
-            anexos.push([arquivo, path]);
+          if (resultEm[i].html.search(cid) > 0) {
+            resultEm[i].html = resultEm[i].html.replace(cid, anexos[attachment]['caminho']);
+            anexos.splice(attachment);
           }
         }
-
-        resultEm[i].anexo = anexos;
       }
+      resultEm[i].anexo = anexos;
     }
-
-    const pool = await sql.connect(config);
-
-    const resultWp = await pool
-      .request()
-      .input('telefone1', sql.BigInt, '55' + result1[0].telefone1.replace(/\D/g, ''))
-      .input('telefone11', sql.BigInt, '55' + result1[0].telefone1.replace(/\D/g, ''))
-      .input('telefone2', sql.BigInt, '55' + result1[0].telefone2.replace(/\D/g, ''))
-      .input('telefone22', sql.BigInt, '55' + result1[0].telefone2.replace(/\D/g, ''))
-      .input('remetente1', sql.BigInt, req.dealerWhatsapp1.replace(/\D/g, ''))
-      .input('remetente11', sql.BigInt, req.dealerWhatsapp1.replace(/\D/g, ''))
-      .input('remetente2', sql.BigInt, req.dealerWhatsapp2.replace(/\D/g, ''))
-      .input('remetente22', sql.BigInt, req.dealerWhatsapp2.replace(/\D/g, ''))
-      .input('remetente3', sql.BigInt, req.dealerWhatsapp3.replace(/\D/g, ''))
-      .input('remetente33', sql.BigInt, req.dealerWhatsapp3.replace(/\D/g, ''))
-      .query(
-        `SELECT id, case when tipo = 'in' then remetente else telefone end remetente, mensagem, CONCAT(CONVERT(VARCHAR(20), data, 103), ' ', CONVERT(VARCHAR(20), data, 108)) data, 'whatsapp' tipo, tipo direcao, DATEDIFF(SECOND,{d '1970-01-01'}, data) timestamp, '' anexo, '' contentIdMap FROM WHATSAPP.MENSAGENS        where  (remetente = @telefone1 or telefone = @telefone11 or remetente = @telefone2 or telefone = @telefone22) and (remetente = @remetente1 or telefone = @remetente11 or remetente = @remetente2 or telefone = @remetente22 or remetente = @remetente3 or telefone = @remetente33)`
-      );
-    resultEm.push(...resultWp.recordset);
-
-    const result = resultEm.sort((a, b) => {
-      return new Date(a.timestamp) - new Date(b.timestamp);
-    });
-
-    sql.on('error', (err) => {});
 
     return res.status(200).send({
       status: 'ok',
-      result,
+      resultEm,
     });
   } catch (err) {
     tratamentoErros(req, res, err);
@@ -180,50 +205,6 @@ exports.listarMensagens = async (req, res) => {
       status: 'erro',
       tipo: 'Erro de Servidor',
       mensagem: 'Ocorreu um erro ao listar as mensagens.',
-    });
-  }
-};
-
-exports.listarCanais = async (req, res) => {
-  try {
-    if (req.body.dealer === undefined || req.body.lead === undefined) {
-      return res.status(400).send({
-        status: 'erro',
-        tipo: 'Falha na Chamada',
-        mensagem: 'Requisição inválida.',
-      });
-    }
-
-    const connection1 = await mysql.createConnection(dbConfig);
-    const [
-      result,
-    ] = await connection1.query(
-      'SELECT telefone1, telefone2, email FROM leads where (id = ?) and (dealer = ?)',
-      [req.body.lead, req.body.dealer]
-    );
-    await connection1.end();
-
-    const canais = [];
-
-    if (req.dealerWhatsapp1) {
-      if (result[0].telefone1) canais.push({ tipo: 'WhatsApp', destinatario: result[0].telefone1 });
-      if (result[0].telefone2) canais.push({ tipo: 'WhatsApp', destinatario: result[0].telefone2 });
-    }
-
-    if (req.dealerEmail) {
-      if (result[0].email) canais.push({ tipo: 'E-mail', destinatario: result[0].email });
-    }
-
-    return res.status(200).send({
-      status: 'ok',
-      canais,
-    });
-  } catch (err) {
-    tratamentoErros(req, res, err);
-    return res.status(400).send({
-      status: 'erro',
-      tipo: 'Erro de Servidor',
-      mensagem: 'Ocorreu um erro ao listar os canais.',
     });
   }
 };
@@ -245,52 +226,36 @@ exports.enviarEmail = async (req, res) => {
       });
     }
 
-    const anexosEnviados = req.body.anexos; // anexos enviados pelo cliente
-    let anexosMysql = ''; // anexos no formato que vou inserir no bd
-    const anexosNodemailer = []; // anexos no formato que vou enviar para o nodemailer
-
-    if (anexosEnviados !== '') {
-      const anexos_enviados_array = req.body.anexos.split(';==;');
-
-      for (let index = 0; index < anexos_enviados_array.length - 1; index++) {
-        const anexoNodemailer = [];
-        anexoNodemailer['filename'] = anexos_enviados_array[index].split('/').pop();
-        anexoNodemailer['path'] = anexos_enviados_array[index].replace(
-          process.env.STORAGE_HTTP,
-          process.env.STORAGE
-        );
-
-        anexosNodemailer.push(anexoNodemailer);
-
-        anexosMysql =
-          anexosMysql +
-          anexos_enviados_array[index].split('/').pop() +
-          ':==:' +
-          anexos_enviados_array[index] +
-          ';==;';
-      }
-    }
-
     const result = await transporter.sendMail({
       from: req.dealerEmail,
       to: req.body.destinatario,
       subject: req.body.assunto,
       html: req.body.html,
-      attachments: anexosNodemailer,
+      attachments: JSON.parse(
+        JSON.stringify(req.body.anexos)
+          .split('"nome":')
+          .join('"filename":')
+          .split('"caminho":')
+          .join('"path":')
+      ),
     });
 
     const connection3 = await mysql.createConnection(dbConfig);
     await connection3.query(
-      'INSERT INTO emails (remetente, email, html, idlead, assunto, messageId, direcao, data, anexo) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?)',
+      'INSERT INTO emails (idDealer, idlead, idUser, email_loja, email, html, assunto, messageId, direcao, anexo, status, status_response) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [
+        req.body.dealer,
+        req.body.lead,
+        req.userId,
         req.dealerEmail,
         req.body.destinatario,
         req.body.html,
-        req.body.lead,
         req.body.assunto,
         result.messageId,
         'out',
-        anexosMysql,
+        JSON.stringify(req.body.anexos),
+        'Enviado',
+        JSON.stringify(result),
       ]
     );
     await connection3.end();
@@ -308,78 +273,29 @@ exports.enviarEmail = async (req, res) => {
   }
 };
 
-exports.uploadAnexoEmail = async (req, res) => {
-  try {
-    const id = uuid.v1();
-
-    const fileKeys = Object.keys(req.files);
-
-    const arquivos = [];
-
-    fileKeys.forEach((element) => {
-      arquivos.push([
-        req.files[element].name.replace(' ', ''),
-        `${process.env.STORAGE_HTTP}${id}_${req.files[element].name.replace(' ', '')}`,
-      ]);
-
-      req.files[element].mv(
-        `${process.env.STORAGE}${id}_${req.files[element].name.replace(' ', '')}`,
-        (err) => {
-          if (err) console.log(err);
-        }
-      );
-    });
-
-    return res.status(200).send({
-      status: 'ok',
-      arquivos,
-    });
-  } catch (err) {
-    tratamentoErros(req, res, err);
-    return res.status(400).send({
-      status: 'erro',
-      tipo: 'Erro de Servidor',
-      mensagem: 'Ocorreu um erro ao enviar o e-mail.',
-    });
-  }
-};
-
 exports.mailgun = async (req, res) => {
   try {
-    let filenames = '';
-
-    for (let index = 0; index < req.files.length; index++) {
-      const file = req.files[index];
-      const filename = `${file.destination}${file.filename}`;
-      filenames = filenames + file.originalname + ':==:' + filename + ';==;';
-
-      const connection1 = await mysql.createConnection(dbConfig);
-      await connection1.query('INSERT INTO arquivos (nome, nomeoriginal) values (?, ?)', [
-        file.filename,
-        file.originalname,
-      ]);
-      await connection1.end();
-    }
-
     const connection0 = await mysql.createConnection(dbConfig);
-    await connection0.query('UPDATE leads SET agendamentoContato = NOW() WHERE (email = ?)', [
-      req.body.sender,
-    ]);
+    await connection0.query(
+      'UPDATE leads SET agendamentoContato = NOW() WHERE (email = ?) AND (dealer = ?)',
+      [req.body.sender, 10] // TODO: pegar o codigo do dealer de acordo com a tabela dealerCanais
+    );
     await connection0.end();
 
     const connection1 = await mysql.createConnection(dbConfig);
     await connection1.query(
-      'INSERT INTO emails (remetente, email, html, emailcc, anexo, data, contentIdMap, direcao, assunto) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO emails (idDealer, email_loja, email, html, assunto, anexo, data, contentIdMap, direcao, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [
-        req.body.sender,
+        10, // TODO: pegar o codigo do dealer de acordo com a tabela dealerCanais
         req.body.recipient,
+        req.body.sender,
         req.body['stripped-html'],
         req.body.subject,
-        filenames.split(process.env.STORAGE).join(process.env.STORAGE_HTTP),
+        JSON.stringify(await processarUpload(req.files, 10, null, null)),
         new Date(req.body.timestamp * 1000),
         req.body['content-id-map'],
         'in',
-        req.body.subject,
+        'Recebido',
       ]
     );
     await connection1.end();
@@ -437,6 +353,121 @@ exports.mailgun = async (req, res) => {
   // # missing here it only means they were absent from the message.
 };
 
+exports.chatapi = async (req, res) => {
+  try {
+    if (req.body.messages !== undefined) {
+      if (req.body.messages[0].fromMe.toString() != 'true') {
+        const nro_loja = '1135113707';
+        const celular = req.body.messages[0].author.split('@')[0].slice(2);
+
+        const connection0 = await mysql.createConnection(dbConfig);
+        await connection0.query(
+          'UPDATE leads SET agendamentoContato = NOW() WHERE (digits(telefone1) = ? or digits(telefone2) = ?) AND (dealer = ?)',
+          [celular, celular, 10] // TODO: pegar o codigo do dealer de acordo com a tabela dealerCanais
+        );
+        await connection0.end();
+
+        const connection3 = await mysql.createConnection(dbConfig);
+        const [
+          result,
+        ] = await connection3.query(
+          'INSERT INTO whatsapp (direcao, instancia, nro_loja, nro_cliente, mensagem, emResposta, status, status_response, queuenumber, chatId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          [
+            'in',
+            'instance' + req.body.instanceId.toString(),
+            nro_loja,
+            celular,
+            req.body.messages[0].body,
+            req.body.messages[0].quotedMsgBody,
+            'Recebida',
+            JSON.stringify(req.body),
+            req.body.messages[0].messageNumber,
+            req.body.messages[0].id,
+          ]
+        );
+        await connection3.end();
+      }
+    } else if (req.body.ack !== undefined) {
+      const messageNumber = req.body.ack[0].messageNumber;
+    }
+
+    res.send('OK');
+  } catch (err) {
+    const html = `
+        <!doctype html>
+        <html lang="pr-br">
+        <head>
+            <title>Hooks Chat-Api</title>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+            </head>
+        <body>
+            <p>Você está recebendo este e-mail pois o processo de receber o retorno da chat-api gerou um erro.</p>
+            <p>headers: ${JSON.stringify(req.headers)}</p>
+            <p>body: ${JSON.stringify(req.body)}</p>
+            <p>error: ${err.message}/p>
+        </body>
+        </html>`;
+
+    await transporter.sendMail({
+      from: '"Robô Rocket Sales" <robot@rocketsales.app>',
+      to: 'claudio@amaro.com.br',
+      subject: 'Erro hooks Chat-api',
+      html,
+    });
+
+    tratamentoErros(req, res, err);
+
+    res.send('ok');
+  }
+
+  // ('From', u'Ev Kontsevoy '),
+  // ('sender', u'ev@mailgunhq.com'),
+  // ('To', u'Awesome Bot '),
+  // ('attachment-count', u'1'),
+  // ('Subject', u'Re: Your application')])
+  // ('stripped-text', u'My application is attached.nThanks.'),
+  // ('stripped-html', u'HTML version of stripped-text'),
+  // ('body-html', u'[full html version of the message]'),
+  // ('body-plain', u'[full text version of the message]'),
+  // ('stripped-signature', u'-- nEv Kontsevoy,nCo-founder and CEO of Mailgun.net  - the emailnplatform for developers.'),
+  // ('recipient', u'bot@hello.mailgun.org'),
+  // ('subject', u'Re: Your application'),
+  // ('timestamp', u'1320695889'),
+  // ('signature', u'b8869291bd72f1ad38238429c370cb13a109eab01681a31b1f4a2751df1e3379'),
+  // ('token', u'9ysf1gfmskxxsp1zqwpwrqf2qd4ctdmi5e$k-ajx$x0h846u88'),
+  // ('In-Reply-To', u'Message-Id-of-original-message'),
+  // ('Date', u'Mon, 7 Nov 2011 11:58:06 -0800'),
+  // ('Message-Id', u'message-id-goes-here'),
+  // ('X-Originating-Ip', u'[216.156.80.78]'),
+  // # NOTE: ALL message fields are parsed and pasted. If some fields (like "Cc") are
+  // # missing here it only means they were absent from the message.
+};
+
+exports.upload = async (req, res) => {
+  try {
+    if (req.body.dealer === undefined || req.body.lead === undefined) {
+      return res.status(400).send({
+        status: 'erro',
+        tipo: 'Falha na Chamada',
+        mensagem: 'Requisição inválida.',
+      });
+    }
+
+    return res.status(200).send({
+      status: 'ok',
+      arquivos: await processarUpload(req.files, req.body.dealer, req.body.lead, req.userId),
+    });
+  } catch (err) {
+    tratamentoErros(req, res, err);
+    return res.status(400).send({
+      status: 'erro',
+      tipo: 'Erro de Servidor',
+      mensagem: 'Ocorreu um erro ao enviar o(s) arquivo(s).',
+    });
+  }
+};
+
 exports.file = async (req, res) => {
   try {
     const connection1 = await mysql.createConnection(dbConfig);
@@ -445,8 +476,24 @@ exports.file = async (req, res) => {
     ]);
     await connection1.end();
 
-    res.download(`${process.env.STORAGE}${req.params.filename}`, result[0].nomeoriginal);
+    //res.download(`${process.env.STORAGE}${req.params.filename}`, result[0].nomeoriginal);
+
+    // res.sendFile(`${process.env.STORAGE}${req.params.filename}`, {
+    //   headers: { 'Content-Type': result[0].mimetype, 'Content-Disposition': 'attachment; filename="'+result[0].nomeoriginal+'"' },
+    // });
+
+    res.sendFile(`${process.env.STORAGE}${req.params.filename}`, {
+      headers: {
+        'Content-Type': result[0].mimetype,
+        'Content-Disposition': 'filename="' + result[0].nomeoriginal + '"',
+      },
+    });
   } catch (err) {
     tratamentoErros(req, res, err);
+    return res.status(400).send({
+      status: 'erro',
+      tipo: 'Erro de Servidor',
+      mensagem: 'Ocorreu um erro ao realizar o download do arquivo.',
+    });
   }
 };
