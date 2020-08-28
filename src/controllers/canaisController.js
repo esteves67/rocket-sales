@@ -53,7 +53,7 @@ exports.listarMensagens = async (req, res) => {
 
     const connection = await mysql.createConnection(dbConfig);
     const [resultEm] = await connection.query(
-      `SELECT user.nome nomeUsuario, 'E-mail' as tipo, emails.direcao, emails.email_loja endereco_loja, emails.email endereco_cliente, emails.assunto, emails.html mensagem, emails.anexo, emails.contentIdMap, DateTimeFormatPtBr(emails.data) data, emails.status
+      `SELECT user.nome nomeUsuario, 'E-mail' as tipo, emails.direcao, emails.email_loja endereco_loja, emails.email endereco_cliente, emails.assunto, emails.html mensagem, emails.anexo, emails.contentIdMap, DateTimeFormatPtBr(emails.data) data, emails.status, '' emResposta
       FROM
         emails left join user on emails.idUser = user.id
       WHERE
@@ -76,7 +76,7 @@ exports.listarMensagens = async (req, res) => {
           ))
         )
         UNION
-        SELECT user.nome, 'WhatsApp', whatsapp.direcao, whatsapp.nro_loja, whatsapp.nro_cliente, '' assunto, whatsapp.mensagem, '' anexo, '' contentIdMap, DateTimeFormatPtBr(whatsapp.data) data, whatsapp.status
+        SELECT user.nome, 'WhatsApp', whatsapp.direcao, whatsapp.nro_loja, whatsapp.nro_cliente, '' assunto, whatsapp.mensagem, '' anexo, '' contentIdMap, DateTimeFormatPtBr(whatsapp.data) data, whatsapp.status, emResposta
         FROM
           whatsapp left join user on whatsapp.idUser = user.id
         WHERE
@@ -617,7 +617,7 @@ exports.listarCanais = async (req, res) => {
       dealercanais.id,
       dealercanais.tipo,
       dealercanais.endereco remetente,
-      digits(telefone1) as destinataio
+      digits(telefone1) as destinatario
     FROM leads inner join dealercanais on leads.dealer = dealercanais.dealer and leads.departamento = dealercanais.departamento
     where (leads.id = ?) and (leads.dealer = ?) and (tipo = 'whatsapp') and (digits(telefone1) is not null)
     union
@@ -625,7 +625,7 @@ exports.listarCanais = async (req, res) => {
       dealercanais.id,
       dealercanais.tipo,
       dealercanais.endereco remetente,
-      digits(telefone2) as destinataio
+      digits(telefone2) as destinatario
     FROM leads inner join dealercanais on leads.dealer = dealercanais.dealer and leads.departamento = dealercanais.departamento
     where (leads.id = ?) and (leads.dealer = ?) and (tipo = 'whatsapp') and (digits(telefone2) is not null)
     union
@@ -633,7 +633,7 @@ exports.listarCanais = async (req, res) => {
       dealercanais.id,
       dealercanais.tipo,
       dealercanais.endereco remetente,
-      email as destinataio
+      email as destinatario
     FROM leads inner join dealercanais on leads.dealer = dealercanais.dealer and leads.departamento = dealercanais.departamento
     where (leads.id = ?) and (leads.dealer = ?) and (tipo = 'e-mail') and (EMAIL is not null)
     `,
