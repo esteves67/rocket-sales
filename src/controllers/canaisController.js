@@ -26,7 +26,7 @@ async function processarUpload(files, dealer, lead, user) {
     );
     await connection1.end();
 
-    ret_files.push({ nome: file.originalname, caminho: process.env.STORAGE_HTTP + file.filename });
+    ret_files.push({ nome: file.originalname, caminho: process.env.STORAGE_HTTP + file.filename, mimetype: file.mimetype });
   }
 
   return ret_files;
@@ -407,7 +407,7 @@ exports.enviarWhatsApp = async (req, res) => {
 
         const connection3 = await mysql.createConnection(dbConfig);
         await connection3.query(
-          'INSERT INTO whatsapp (idDealer, idlead, idUser, direcao, instancia, nro_loja, nro_cliente, mensagem, status, status_response, queuenumber, chatId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          'INSERT INTO whatsapp (idDealer, idlead, idUser, direcao, instancia, nro_loja, nro_cliente, mensagem, status, status_response, queuenumber, chatId, mimetype) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
           [
             req.body.dealer,
             req.body.lead,
@@ -421,6 +421,7 @@ exports.enviarWhatsApp = async (req, res) => {
             JSON.stringify(result.data),
             queueNumber,
             id,
+            arquivo.mimetype
           ]
         );
         await connection3.end();
