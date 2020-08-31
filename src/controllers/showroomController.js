@@ -34,7 +34,7 @@ exports.cadastro = async (req, res) => {
       dealer,
       origem,
       departamento,
-      tipovenda
+      tipoVenda
     } = req.body;
 
     if (
@@ -49,7 +49,7 @@ exports.cadastro = async (req, res) => {
       observacao === undefined ||
       departamento === undefined ||
       dealer === undefined ||
-      tipovenda === undefined
+      tipoVenda === undefined
     ) {
       return res.status(400).send({
         status: 'erro',
@@ -121,7 +121,7 @@ exports.cadastro = async (req, res) => {
     const [
       result,
     ] = await connection.query(
-      'INSERT INTO leads (nome, telefone1, email, veiculoInteresse,  vendedor, comoconheceu, horaEntrada, observacao, dealer, origem, createdBy, departamento, tipovenda) VALUES (?, ?, ?, ?, ?, ?, ?, ? , ?, ?, ?, ?, ?);',
+      'INSERT INTO leads (nome, telefone1, email, veiculoInteresse,  vendedor, comoconheceu, horaEntrada, observacao, dealer, origem, createdBy, departamento, tipoVenda) VALUES (?, ?, ?, ?, ?, ?, ?, ? , ?, ?, ?, ?, ?);',
       [
         nome,
         telefone1.replace(/\D/g, ''),
@@ -135,7 +135,7 @@ exports.cadastro = async (req, res) => {
         origem,
         req.userId,
         departamento,
-        tipovenda
+        tipoVenda
       ]
     );
     await connection.end();
@@ -173,7 +173,7 @@ exports.atualizar = async (req, res) => {
       observacao,
       dealer,
       departamento,
-      tipovenda
+      tipoVenda
     } = req.body;
 
     if (
@@ -190,7 +190,7 @@ exports.atualizar = async (req, res) => {
       comoconheceu === undefined ||
       departamento === undefined ||
       observacao === undefined ||
-      tipovenda === undefined
+      tipoVenda === undefined
     ) {
       return res.status(400).send({
         status: 'erro',
@@ -254,7 +254,7 @@ exports.atualizar = async (req, res) => {
 
     const connection = await mysql.createConnection(dbConfig);
     await connection.query(
-      `UPDATE leads SET nome = ?, departamento = ?, cpf = ?, dataNascimento = ?, telefone1 = NULLIF(?, ''), telefone2 = NULLIF(?, ''), email = ?, veiculoInteresse = ?, vendedor = ?, observacao = ?, comoconheceu = ?, tipovenda = ? WHERE id = ? and dealer = ?;`,
+      `UPDATE leads SET nome = ?, departamento = ?, cpf = ?, dataNascimento = ?, telefone1 = NULLIF(?, ''), telefone2 = NULLIF(?, ''), email = ?, veiculoInteresse = ?, vendedor = ?, observacao = ?, comoconheceu = ?, tipoVenda = ? WHERE id = ? and dealer = ?;`,
       [
         nome,
         departamento,
@@ -267,7 +267,7 @@ exports.atualizar = async (req, res) => {
         vendedor,
         observacao,
         comoconheceu,
-        tipovenda,
+        tipoVenda,
         lead,
         dealer,
       ]
@@ -585,7 +585,7 @@ exports.selecionarLead = async (req, res) => {
     const [
       dadoslead,
     ] = await connection.query(
-      'SELECT  leads.nome, departamento, origem, cpf, leads.dataNascimento, leads.telefone1, leads.telefone2, leads.email, veiculoInteresse, user.id as vendedor,  leads.comoconheceu, leads.observacao, leads.horaEntrada, user.nome as nomeVendedor, tipovenda FROM leads left JOIN user ON user.id = leads.vendedor WHERE leads.dealer = ? And leads.id = ? ',
+      'SELECT  leads.nome, departamento, origem, cpf, leads.dataNascimento, leads.telefone1, leads.telefone2, leads.email, veiculoInteresse, user.id as vendedor,  leads.comoconheceu, leads.observacao, leads.horaEntrada, user.nome as nomeVendedor, leads.tipoVenda FROM leads left JOIN user ON user.id = leads.vendedor WHERE leads.dealer = ? And leads.id = ? ',
       [dealer, lead]
     );
     await connection.end();

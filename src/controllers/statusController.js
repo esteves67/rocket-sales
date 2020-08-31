@@ -20,6 +20,22 @@ exports.listar = async (req, res) => {
       });
     }
 
+    if (lead === '0') {
+      const connection1 = await mysql.createConnection(dbConfig);
+      const [
+        lista_status,
+      ] = await connection1.query(
+        'select * from dealerdepartamentosstatus where dealerdepartamentosstatus.dealer = ?',
+        [dealer]
+      );
+      await connection1.end();
+
+      return res.status(200).send({
+        status: 'ok',
+        lista_status,
+      });
+    }
+
     const connection = await mysql.createConnection(dbConfig);
     const [
       result,

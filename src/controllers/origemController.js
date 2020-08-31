@@ -20,6 +20,22 @@ exports.listar = async (req, res) => {
       });
     }
 
+    if (lead === '0') {
+      const connection1 = await mysql.createConnection(dbConfig);
+      const [
+        lista_origem,
+      ] = await connection1.query(
+        'select * from dealerdepartamentosorigem where dealerdepartamentosorigem.dealer = ?',
+        [dealer]
+      );
+      await connection1.end();
+
+      return res.status(200).send({
+        status: 'ok',
+        lista_origem,
+      });
+    }
+
     const connection = await mysql.createConnection(dbConfig);
     const [
       result,
