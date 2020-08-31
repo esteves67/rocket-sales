@@ -101,7 +101,6 @@ exports.listarMensagens = async (req, res) => {
         ORDER BY data
         `,
       [
-
         req.body.dealer,
         req.body.lead,
         result1[0].email,
@@ -658,6 +657,100 @@ exports.listarCanais = async (req, res) => {
       status: 'erro',
       tipo: 'Erro de Servidor',
       mensagem: 'Ocorreu um erro ao listar os canais de comunicação com esse cliente.',
+    });
+  }
+};
+
+exports.asterisk = async (req, res) => {
+  if (
+    req.query.direcao === undefined ||
+    req.query.nro_loja === undefined ||
+    req.query.nro_cliente === undefined ||
+    req.query.ramal === undefined ||
+    req.query.status === undefined ||
+    req.query.tempo === undefined
+  ) {
+    return res.status(400).send({
+      status: 'erro',
+      tipo: 'Falha na Chamada',
+      mensagem: 'Requisição inválida. Nem todos os parâmetros foram enviados.',
+    });
+  }
+
+  try {
+    if (req.query.direcao !== 'in' && req.query.direcao !== 'out') {
+      return res.status(400).send({
+        status: 'erro',
+        tipo: 'Falha na Chamada',
+        mensagem:
+          'Valor inválido para o parâmetro "direcao". Os valores permitidos são "in" para ligações de entrada e "out" para ligações de saída.',
+      });
+    }
+
+    if (
+      req.query.nro_loja !== req.query.nro_loja.replace(/\D/g, '') ||
+      req.query.nro_loja.length < 10 ||
+      req.query.nro_loja.length > 11
+    ) {
+      return res.status(400).send({
+        status: 'erro',
+        tipo: 'Falha na Chamada',
+        mensagem:
+          'Valor inválido para o parâmetro "nro_loja". O valor informado deve ser um número de 10 ou 11 dígitos. Exemplo: "1135113700" ou "11935113700".',
+      });
+    }
+
+    if (
+      req.query.nro_cliente !== req.query.nro_cliente.replace(/\D/g, '') ||
+      req.query.nro_cliente.length < 10 ||
+      req.query.nro_cliente.length > 11
+    ) {
+      return res.status(400).send({
+        status: 'erro',
+        tipo: 'Falha na Chamada',
+        mensagem:
+          'Valor inválido para o parâmetro "nro_cliente". O valor informado deve ser um número de 10 ou 11 dígitos. Exemplo: "1135113700" ou "11935113700".',
+      });
+    }
+
+    if (req.query.status === '') {
+      return res.status(400).send({
+        status: 'erro',
+        tipo: 'Falha na Chamada',
+        mensagem: 'Não foi informado nenhum valor para o parâmetro "status".',
+      });
+    }
+
+    if (req.query.tempo !== req.query.tempo.replace(/\D/g, '')) {
+      return res.status(400).send({
+        status: 'erro',
+        tipo: 'Falha na Chamada',
+        mensagem:
+          'Valor inválido para o parâmetro "tempo". Deve ser informado um número inteiro que representa os segundos que a ligação durou.',
+      });
+    }
+
+    const connection3 = await mysql.createConnection(dbConfig);
+    await connection3.query(
+      'INSERT INTO telefone (direcao, nro_loja, ramal, nro_cliente, status, tempo) VALUES (?, ?, digits(?), ?, ?, ?)',
+      [
+        req.query.direcao,
+        req.query.nro_loja,
+        req.query.ramal,
+        req.query.nro_cliente,
+        req.query.status,
+        req.query.tempo,
+      ]
+    );
+    await connection3.end();
+
+    return res.status(200).send({
+      status: 'ok',
+    });
+  } catch (error) {
+    return res.status(400).send({
+      status: 'erro',
+      mensagem: 'Ocorreu um erro durante a requisição.',
     });
   }
 };

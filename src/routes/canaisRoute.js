@@ -17,6 +17,8 @@ router.get('/listarMensagens', auth, authDealer, controller.listarMensagens);
 router.post('/mailgun', upload.any(), controller.mailgun);
 router.post('/chat-api', controller.chatapi);
 
+router.get('/asterisk', controller.asterisk);
+
 router.post('/upload', auth, authDealer, upload.any(), controller.upload);
 router.get('/file/:filename', controller.file);
 

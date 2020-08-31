@@ -743,7 +743,7 @@ exports.listarVendedores = async (req, res) => {
   try {
     const connection = await mysql.createConnection(dbConfig);
     const [vendedores] = await connection.query(
-      'SELECT user.id, nome, email, permissao FROM user inner join dealerusers on dealerusers.user = user.id WHERE dealer = ?',
+      'SELECT user.id, nome, email, permissao, recebelead FROM user inner join dealerusers on dealerusers.user = user.id WHERE dealer = ?',
       dealer
     );
     await connection.end();
@@ -815,6 +815,39 @@ exports.alterarPermissao = async (req, res) => {
       status: 'erro',
       tipo: 'Erro de Servidor',
       mensagem: 'Ocorreu um erro ao alterar a permissão do usuário.',
+    });
+  }
+};
+
+exports.alterarRecebeLead = async (req, res) => {
+  try {
+    const { dealer, user } = req.body;
+
+    if (dealer === undefined || user === undefined) {
+      return res.status(400).send({
+        status: 'erro',
+        tipo: 'Falha na Chamada',
+        mensagem: 'Requisição inválida.',
+      });
+    }
+
+    const connection = await mysql.createConnection(dbConfig);
+    await connection.query('UPDATE dealerusers SET recebeLead = !recebeLead WHERE dealer = ? and user = ?', [
+      dealer,
+      user,
+    ]);
+    await connection.end();
+
+    return res.status(200).send({
+      status: 'ok',
+      mensagem: 'Alterado com sucesso!',
+    });
+  } catch (err) {
+    tratamentoErros(req, res, err);
+    return res.status(400).send({
+      status: 'erro',
+      tipo: 'Erro de Servidor',
+      mensagem: 'Ocorreu um erro ao alterar o usuário.',
     });
   }
 };

@@ -20,5 +20,7 @@ app.use('/faturamento', require('./routes/faturamentoRoute'));
 app.use('/menu', require('./routes/menuRoute'));
 app.use('/showroom', require('./routes/showroomRoute'));
 app.use('/canais', require('./routes/canaisRoute'));
+app.use('/origem', require('./routes/origemRoute'));
+app.use('/status', require('./routes/statusRoute'));
 
 module.exports = app;

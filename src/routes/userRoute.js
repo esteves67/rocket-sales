@@ -13,6 +13,8 @@ router.post('/editar', auth, controller.editar);
 router.post('/editarSenha', auth, controller.editarSenha);
 router.post('/alterarPermissao', auth, authDealer, authPermissao('AlterarPermissaoUsuarios'), controller.alterarPermissao);
 
+router.post('/alterarRecebeLead', auth, authDealer, authPermissao('AlterarPermissaoUsuarios'), controller.alterarRecebeLead);
+
 router.get('/convites', auth, controller.listarConvites);
 router.post('/convite', auth, controller.aceitarConvite);
 
