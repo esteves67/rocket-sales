@@ -267,9 +267,9 @@ exports.atualizar = async (req, res) => {
         vendedor,
         observacao,
         comoconheceu,
+        tipovenda,
         lead,
         dealer,
-        tipovenda
       ]
     );
     await connection.end();
