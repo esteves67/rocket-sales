@@ -1,10 +1,11 @@
 const express = require('express');
-const { auth, authDealer } = require('../util/auth');
+const { auth, authDealer, authBase64 } = require('../util/auth');
 const controller = require('../controllers/showroomController');
 
 const router = express.Router();
 
 router.post('/cadastro', auth, authDealer, controller.cadastro);
+router.post('/cadastro2', authBase64, controller.cadastro);
 router.post('/atualizar', auth, authDealer, controller.atualizar);
 router.post('/registraSaida', auth, authDealer, controller.registraSaida);
 router.post('/registraTestDrive', auth, authDealer, controller.registraTestDrive);

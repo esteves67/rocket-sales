@@ -4,7 +4,6 @@ const fs = require('fs');
 const mysql = require('mysql2/promise');
 const transporter = require('../util/nodemailer');
 const tratamentoErros = require('../util/tratamentoErros');
-const { Console } = require('console');
 
 const dbConfig = {
   host: process.env.DB_HOST,
@@ -53,7 +52,7 @@ exports.listarMensagens = async (req, res) => {
 
     const connection = await mysql.createConnection(dbConfig);
     const [resultEm] = await connection.query(
-      `SELECT user.nome nomeUsuario, 'E-mail' as tipo, emails.direcao, emails.email_loja endereco_loja, emails.email endereco_cliente, emails.assunto, emails.html mensagem, emails.anexo, emails.contentIdMap, DateTimeFormatPtBr(emails.data) data, emails.status, '' emResposta
+      `SELECT user.nome nomeUsuario, 'E-mail' as tipo, emails.direcao, emails.email_loja endereco_loja, emails.email endereco_cliente, emails.assunto, emails.html mensagem, emails.anexo, emails.contentIdMap, DateTimeFormatPtBr(emails.data) data, emails.status, '' emResposta, '' mimetype
       FROM
         emails left join user on emails.idUser = user.id
       WHERE
@@ -76,7 +75,7 @@ exports.listarMensagens = async (req, res) => {
           ))
         )
         UNION
-        SELECT user.nome, 'WhatsApp', whatsapp.direcao, whatsapp.nro_loja, whatsapp.nro_cliente, '' assunto, whatsapp.mensagem, '' anexo, '' contentIdMap, DateTimeFormatPtBr(whatsapp.data) data, whatsapp.status, emResposta
+        SELECT user.nome, 'WhatsApp', whatsapp.direcao, whatsapp.nro_loja, whatsapp.nro_cliente, '' assunto, whatsapp.mensagem, '' anexo, '' contentIdMap, DateTimeFormatPtBr(whatsapp.data) data, whatsapp.status, emResposta, mimetype
         FROM
           whatsapp left join user on whatsapp.idUser = user.id
         WHERE

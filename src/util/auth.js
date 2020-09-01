@@ -24,6 +24,38 @@ function auth(req, res, next) {
   });
 }
 
+const authBase64 = async (req, res, next) => {
+  const base64 = req.headers.authorization;
+
+  if (!base64) {
+    return res.status(401).send({ auth: false, message: 'Usuário e senha não informados.' });
+  }
+
+  try {
+    const authe = new Buffer(req.headers.authorization.split(' ')[1], 'base64')
+      .toString()
+      .split(':');
+
+    const email = authe[0];
+    const password = authe[1];
+
+    const connection = await mysql.createConnection(dbConfig);
+    const [result] = await connection.query('SELECT * FROM user WHERE email = ? and password = ?', [
+      email,
+      password,
+    ]);
+    await connection.end();
+
+    req.userId = result[0].id;
+    req.userEmail = result[0].email;
+    req.userNome = result[0].nome;
+
+    next();
+  } catch (err) {
+    return res.status(401).send({ auth: false, message: 'Usuário e/ou senha inválidos.' });
+  }
+};
+
 const authDealer = async (req, res, next) => {
   const { dealer } = req.body;
   if (dealer !== undefined) {
@@ -71,4 +103,10 @@ const authPermissao = (permissao) => (req, res, next) => {
   next();
 };
 
-module.exports = { auth, authDealer, authAdmin, authPermissao };
+module.exports = {
+  auth,
+  authDealer,
+  authAdmin,
+  authPermissao,
+  authBase64,
+};
