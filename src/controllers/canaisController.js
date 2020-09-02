@@ -12,7 +12,7 @@ const dbConfig = {
   database: process.env.DB_NAME,
 };
 
-async function processarUpload(files, dealer, lead, user) {
+async function processarUpload(files, dealer, lead, user, local) {
   const ret_files = [];
 
   for (let index = 0; index < files.length; index++) {
@@ -20,8 +20,8 @@ async function processarUpload(files, dealer, lead, user) {
 
     const connection1 = await mysql.createConnection(dbConfig);
     await connection1.query(
-      'INSERT INTO arquivos (idDealer, idLead, idUser, nome, nomeoriginal, mimetype, tamanho) values (?, ?, ?, ?, ?, ?, ?)',
-      [dealer, lead, user, file.filename, file.originalname, file.mimetype, file.size]
+      'INSERT INTO arquivos (idDealer, idLead, idUser, nome, nomeoriginal, mimetype, tamanho, local) values (?, ?, ?, ?, ?, ?, ?, ?)',
+      [dealer, lead, user, file.filename, file.originalname, file.mimetype, file.size, local]
     );
     await connection1.end();
 
@@ -558,7 +558,7 @@ exports.upload = async (req, res) => {
 
     return res.status(200).send({
       status: 'ok',
-      arquivos: await processarUpload(req.files, req.body.dealer, req.body.lead, req.userId),
+      arquivos: await processarUpload(req.files, req.body.dealer, req.body.lead, req.userId, req.body.local),
     });
   } catch (err) {
     tratamentoErros(req, res, err);

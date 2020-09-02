@@ -34,7 +34,7 @@ exports.cadastro = async (req, res) => {
       dealer,
       origem,
       departamento,
-      tipoVenda
+      tipoVenda,
     } = req.body;
 
     if (
@@ -135,7 +135,7 @@ exports.cadastro = async (req, res) => {
         origem,
         req.userId,
         departamento,
-        tipoVenda
+        tipoVenda,
       ]
     );
     await connection.end();
@@ -173,7 +173,7 @@ exports.atualizar = async (req, res) => {
       observacao,
       dealer,
       departamento,
-      tipoVenda
+      tipoVenda,
     } = req.body;
 
     if (
@@ -494,7 +494,15 @@ exports.listar = async (req, res) => {
 
 exports.alterarStatus = async (req, res) => {
   try {
-    const { dealer, lead, status, numeroPedido, motivoDesistencia, agendamentoContato, observacao } = req.body;
+    const {
+      dealer,
+      lead,
+      status,
+      numeroPedido,
+      motivoDesistencia,
+      agendamentoContato,
+      observacao,
+    } = req.body;
 
     if (
       dealer === undefined ||
@@ -667,7 +675,10 @@ exports.localizar = async (req, res) => {
 
     let SQLtelefone = '';
     if (telefone !== '') {
-      SQLtelefone = ` and (leads.telefone1 = ${telefone.replace(/\D/g, '')} or leads.telefone2 = ${telefone.replace(/\D/g, '')}) `;
+      SQLtelefone = ` and (leads.telefone1 = ${telefone.replace(
+        /\D/g,
+        ''
+      )} or leads.telefone2 = ${telefone.replace(/\D/g, '')}) `;
     }
 
     const connection = await mysql.createConnection(dbConfig);
@@ -691,4 +702,158 @@ exports.localizar = async (req, res) => {
       mensagem: 'Erro ao obter a lista de leads.',
     });
   }
-}
+};
+
+exports.avaliacaousado_alterar = async (req, res) => {
+  try {
+    const {
+      dealer,
+      lead,
+      marca,
+      modelo,
+      versao,
+      anofabricacao,
+      anomodelo,
+      km,
+      placa,
+      chassi,
+      cor,
+    } = req.body;
+    if (
+      dealer === undefined ||
+      lead === undefined ||
+      marca === undefined ||
+      modelo === undefined ||
+      versao === undefined ||
+      anomodelo === undefined ||
+      anofabricacao === undefined ||
+      km === undefined ||
+      placa === undefined ||
+      chassi === undefined ||
+      cor === undefined
+    ) {
+      return res.status(400).send({
+        status: 'erro',
+        tipo: 'Falha na Chamada',
+        mensagem: 'Requisição inválida.',
+      });
+    }
+
+    const connection = await mysql.createConnection(dbConfig);
+    await connection.query(
+      'INSERT INTO fichaavaliacaousados (dealer, lead, marca, modelo, versao, anofabricacao, anomodelo, km, placa, chassi, cor) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE marca = ?, modelo = ?, versao = ?, anofabricacao = ?, anomodelo = ?, km = ?, placa = ?, chassi = ?, cor = ?',
+      [
+        dealer,
+        lead,
+        marca,
+        modelo,
+        versao,
+        anofabricacao,
+        anomodelo,
+        km,
+        placa,
+        chassi,
+        cor,
+        marca,
+        modelo,
+        versao,
+        anofabricacao,
+        anomodelo,
+        km,
+        placa,
+        chassi,
+        cor,
+      ]
+    );
+    await connection.end();
+
+    return res.status(200).send({
+      status: 'ok',
+    });
+  } catch (err) {
+    tratamentoErros(req, res, err);
+    return res.status(400).send({
+      status: 'erro',
+      tipo: 'Erro de Servidor',
+      mensagem: 'Erro ao atualizar a ficha de avaliação.',
+    });
+  }
+};
+
+exports.avaliacaousado_selecionar = async (req, res) => {
+  try {
+    const { dealer, lead } = req.body;
+    if (dealer === undefined || lead === undefined) {
+      return res.status(400).send({
+        status: 'erro',
+        tipo: 'Falha na Chamada',
+        mensagem: 'Requisição inválida.',
+      });
+    }
+
+    const connection = await mysql.createConnection(dbConfig);
+    const [
+      result,
+    ] = await connection.query('SELECT * FROM fichaavaliacaousados WHERE dealer = ? AND lead = ?', [
+      dealer,
+      lead,
+    ]);
+    await connection.end();
+
+    const connection2 = await mysql.createConnection(dbConfig);
+    const [
+      fotos,
+    ] = await connection2.query(
+      'SELECT id, nome, nomeoriginal, mimetype FROM arquivos WHERE iddealer = ? AND idlead = ? and local = "AvaliacaoUsados"',
+      [dealer, lead]
+    );
+    await connection2.end();
+
+    result[0].fotos = fotos;
+
+    return res.status(200).send({
+      status: 'ok',
+      result,
+    });
+  } catch (err) {
+    tratamentoErros(req, res, err);
+    return res.status(400).send({
+      status: 'erro',
+      tipo: 'Erro de Servidor',
+      mensagem: 'Erro ao obter os dados da ficha de avaliação.',
+    });
+  }
+};
+
+exports.avaliacaousado_deletarfoto = async (req, res) => {
+  try {
+    const { dealer, lead, foto } = req.body;
+    if (dealer === undefined || lead === undefined || foto === undefined) {
+      return res.status(400).send({
+        status: 'erro',
+        tipo: 'Falha na Chamada',
+        mensagem: 'Requisição inválida.',
+      });
+    }
+
+    const connection = await mysql.createConnection(dbConfig);
+    await connection.query('DELETE FROM arquivos WHERE idlead = ? and iddealer = ? and id = ? and local = "AvaliacaoUsados"', [
+      lead,
+      dealer,
+
+      foto,
+    ]);
+    await connection.end();
+
+    return res.status(200).send({
+      status: 'ok',
+    });
+  } catch (err) {
+    tratamentoErros(req, res, err);
+    return res.status(400).send({
+      status: 'erro',
+      tipo: 'Erro de Servidor',
+      mensagem: 'Erro ao deletar a foto.',
+    });
+  }
+};

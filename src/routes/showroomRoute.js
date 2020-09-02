@@ -16,4 +16,9 @@ router.get('/selecionarLead', auth, authDealer, controller.selecionarLead);
 router.get('/listarLog', auth, authDealer, controller.listarLog);
 router.get('/localizar', auth, authDealer, controller.localizar);
 
+
+router.post('/avaliacaousado/alterar', auth, authDealer, controller.avaliacaousado_alterar);
+router.post('/avaliacaousado/deletarfoto', auth, authDealer, controller.avaliacaousado_deletarfoto);
+router.get('/avaliacaousado/selecionar', auth, authDealer, controller.avaliacaousado_selecionar);
+
 module.exports = router;
