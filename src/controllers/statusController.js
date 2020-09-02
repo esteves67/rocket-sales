@@ -20,12 +20,12 @@ exports.listar = async (req, res) => {
       });
     }
 
-    if (lead === '0') {
+    if (lead == '0') {
       const connection1 = await mysql.createConnection(dbConfig);
       const [
         lista_status,
       ] = await connection1.query(
-        'select * from dealerdepartamentosstatus where dealerdepartamentosstatus.dealer = ?',
+        'select distinct status, finalizador from dealerdepartamentosstatus where dealerdepartamentosstatus.dealer = ?',
         [dealer]
       );
       await connection1.end();
@@ -49,7 +49,7 @@ exports.listar = async (req, res) => {
     const [
       lista_status,
     ] = await connection1.query(
-      'select * from dealerdepartamentosstatus where dealerdepartamentosstatus.dealer = ? and dealerdepartamentosstatus.departamento = ?',
+      'select distinct status, finalizador from dealerdepartamentosstatus where dealerdepartamentosstatus.dealer = ? and dealerdepartamentosstatus.departamento = ?',
       [dealer, result[0].departamento]
     );
     await connection1.end();

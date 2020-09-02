@@ -473,7 +473,7 @@ exports.listar = async (req, res) => {
     const [
       leads,
     ] = await connection.query(
-      `SELECT leads.id, origem, departamento, leads.nome, user.nome as vendedor, veiculoInteresse, DateTimeFormatPtBr(horaEntrada) as horaEntrada, DateFormatPtBr(horaEntrada) as dataEntrada, DateTimeFormatPtBr(horaSaida) as horaSaida, statusnegociacao, numeropedido, motivodesistencia, testdrive, testdrivemotivo, testdrivehora, DateTimeFormatPtBr(agendamentoContato) agendamentoContato, IF(agendamentoContato < NOW(), IF(agendamentoContato < DATE_ADD(NOW(), INTERVAL - 2 HOUR), 'Ação Pendente Atrasada', 'Ação Pendente'), '') acao FROM leads LEFT JOIN user ON leads.vendedor = user.id WHERE dealer = ? and DATE(horaEntrada) BETWEEN ? AND ? ${SQLstatus} ${SQLvendedor} ${SQLorigem} ORDER BY CASE WHEN statusnegociacao = 'novo' THEN 5 WHEN statusnegociacao in ('sucesso', 'insucesso') THEN 0 ELSE 2 END DESC, agendamentoContato`,
+      `SELECT leads.id, origem, departamento, leads.nome, user.nome as vendedor, veiculoInteresse, DateTimeFormatPtBr(horaEntrada) as horaEntrada, DateFormatPtBr(horaEntrada) as dataEntrada, DateTimeFormatPtBr(horaSaida) as horaSaida, statusnegociacao, numeropedido, motivodesistencia, testdrive, testdrivemotivo, testdrivehora, DateTimeFormatPtBr(agendamentoContato) agendamentoContato, IF(agendamentoContato < NOW(), IF(agendamentoContato < DATE_ADD(NOW(), INTERVAL - 2 HOUR), 'Ação Pendente Atrasada', 'Ação Pendente'), '') acao FROM leads LEFT JOIN user ON leads.vendedor = user.id WHERE dealer = ? and DATE(horaEntrada) BETWEEN ? AND ? ${SQLstatus} ${SQLvendedor} ${SQLorigem} ORDER BY CASE WHEN statusnegociacao = 'novo' THEN 5 WHEN statusnegociacao in ('sucesso', 'insucesso') THEN 0 ELSE 2 END DESC, leads.agendamentoContato`,
       [dealer, dataInicial1, dataFinal1]
     );
     await connection.end();
@@ -667,7 +667,7 @@ exports.localizar = async (req, res) => {
 
     let SQLtelefone = '';
     if (telefone !== '') {
-      SQLtelefone = ` and (leads.telefone1 = ${telefone} or leads.telefone2 = ${telefone}) `;
+      SQLtelefone = ` and (leads.telefone1 = ${telefone.replace(/\D/g, '')} or leads.telefone2 = ${telefone.replace(/\D/g, '')}) `;
     }
 
     const connection = await mysql.createConnection(dbConfig);
