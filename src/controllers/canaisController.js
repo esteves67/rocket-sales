@@ -20,7 +20,7 @@ async function processarUpload(files, dealer, lead, user, local) {
 
     const connection1 = await mysql.createConnection(dbConfig);
     await connection1.query(
-      'INSERT INTO arquivos (idDealer, idLead, idUser, nome, nomeoriginal, mimetype, tamanho, local) values (?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO arquivos (dealer, lead, user, nome, nomeoriginal, mimetype, tamanho, local) values (?, ?, ?, ?, ?, ?, ?, ?)',
       [dealer, lead, user, file.filename, file.originalname, file.mimetype, file.size, local]
     );
     await connection1.end();
@@ -58,12 +58,12 @@ exports.listarMensagens = async (req, res) => {
     const [resultEm] = await connection.query(
       `SELECT user.nome nomeUsuario, 'E-mail' as tipo, emails.direcao, emails.email_loja endereco_loja, emails.email endereco_cliente, emails.assunto, emails.html mensagem, emails.anexo, emails.contentIdMap, DateTimeFormatPtBr(emails.data) data, emails.status, '' emResposta, '' mimetype
       FROM
-        emails left join user on emails.idUser = user.id
+        emails left join user on emails.user = user.id
       WHERE
         (
           (emails.direcao = 'out') AND
-          (emails.iddealer = ?) AND
-          (emails.idlead = ?)
+          (emails.dealer = ?) AND
+          (emails.lead = ?)
         ) OR
         (
           (emails.direcao = 'in') AND
@@ -81,12 +81,12 @@ exports.listarMensagens = async (req, res) => {
         UNION
         SELECT user.nome, 'WhatsApp', whatsapp.direcao, whatsapp.nro_loja, whatsapp.nro_cliente, '' assunto, whatsapp.mensagem, '' anexo, '' contentIdMap, DateTimeFormatPtBr(whatsapp.data) data, whatsapp.status, emResposta, mimetype
         FROM
-          whatsapp left join user on whatsapp.idUser = user.id
+          whatsapp left join user on whatsapp.user = user.id
         WHERE
         (
           (whatsapp.direcao = 'out') AND
-          (whatsapp.iddealer = ?) AND
-          (whatsapp.idlead = ?)
+          (whatsapp.dealer = ?) AND
+          (whatsapp.lead = ?)
         ) OR
         (
           (whatsapp.direcao = 'in') AND
@@ -211,7 +211,7 @@ exports.enviarEmail = async (req, res) => {
 
     const connection3 = await mysql.createConnection(dbConfig);
     await connection3.query(
-      'INSERT INTO emails (idDealer, idlead, idUser, email_loja, email, html, assunto, messageId, direcao, anexo, status, status_response) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO emails (dealer, lead, user, email_loja, email, html, assunto, messageId, direcao, anexo, status, status_response) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [
         req.body.dealer,
         req.body.lead,
@@ -390,7 +390,7 @@ exports.enviarWhatsApp = async (req, res) => {
 
       const connection3 = await mysql.createConnection(dbConfig);
       await connection3.query(
-        'INSERT INTO whatsapp (idDealer, idlead, idUser, direcao, instancia, nro_loja, nro_cliente, mensagem, status, status_response, queuenumber, chatId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO whatsapp (dealer, lead, user, direcao, instancia, nro_loja, nro_cliente, mensagem, status, status_response, queuenumber, chatId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         [
           req.body.dealer,
           req.body.lead,
@@ -439,7 +439,7 @@ exports.enviarWhatsApp = async (req, res) => {
 
         const connection3 = await mysql.createConnection(dbConfig);
         await connection3.query(
-          'INSERT INTO whatsapp (idDealer, idlead, idUser, direcao, instancia, nro_loja, nro_cliente, mensagem, status, status_response, queuenumber, chatId, mimetype) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          'INSERT INTO whatsapp (dealer, lead, user, direcao, instancia, nro_loja, nro_cliente, mensagem, status, status_response, queuenumber, chatId, mimetype) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
           [
             req.body.dealer,
             req.body.lead,
