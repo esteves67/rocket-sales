@@ -1,6 +1,4 @@
-const util = require('util');
 const axios = require('axios');
-const fs = require('fs');
 const mysql = require('mysql2/promise');
 const transporter = require('../util/nodemailer');
 const tratamentoErros = require('../util/tratamentoErros');
@@ -15,6 +13,8 @@ const dbConfig = {
 async function processarUpload(files, dealer, lead, user, local) {
   const ret_files = [];
 
+  if (files === undefined) return ret_files;
+
   for (let index = 0; index < files.length; index++) {
     const file = files[index];
 
@@ -25,7 +25,11 @@ async function processarUpload(files, dealer, lead, user, local) {
     );
     await connection1.end();
 
-    ret_files.push({ nome: file.originalname, caminho: process.env.STORAGE_HTTP + file.filename, mimetype: file.mimetype });
+    ret_files.push({
+      nome: file.originalname,
+      caminho: process.env.STORAGE_HTTP + file.filename,
+      mimetype: file.mimetype,
+    });
   }
 
   return ret_files;
@@ -166,19 +170,44 @@ exports.enviarEmail = async (req, res) => {
       });
     }
 
-    const result = await transporter.sendMail({
-      from: req.dealerEmail,
-      to: req.body.destinatario,
-      subject: req.body.assunto,
-      html: req.body.html,
-      attachments: JSON.parse(
-        JSON.stringify(req.body.anexos)
-          .split('"nome":')
-          .join('"filename":')
-          .split('"caminho":')
-          .join('"path":')
-      ),
-    });
+    const connection0 = await mysql.createConnection(dbConfig);
+    const [result0] = await connection0.query(
+      `
+      SELECT departamento FROM leads WHERE (id = ?) and (dealer = ?)
+      `,
+      [req.body.lead, req.body.dealer]
+    );
+    await connection0.end();
+
+    const connection1 = await mysql.createConnection(dbConfig);
+    const [result1] = await connection1.query(
+      `
+        SELECT endereco
+        FROM dealercanais
+        WHERE (dealer = ?) and (departamento = ?) and (tipo = 'E-mail') and (ativo = 1)
+        LIMIT 1
+      `,
+      [req.body.dealer, result0[0].departamento]
+    );
+    await connection1.end();
+
+    let result2 = {};
+
+    try {
+      result2 = await transporter.sendMail({
+        from: result1[0].endereco,
+        to: req.body.destinatario,
+        subject: req.body.assunto,
+        html: req.body.html,
+        attachments: JSON.parse(
+          JSON.stringify(req.body.anexos)
+            .split('"nome":')
+            .join('"filename":')
+            .split('"caminho":')
+            .join('"path":')
+        ),
+      });
+    } catch (error) {}
 
     const connection3 = await mysql.createConnection(dbConfig);
     await connection3.query(
@@ -187,15 +216,15 @@ exports.enviarEmail = async (req, res) => {
         req.body.dealer,
         req.body.lead,
         req.userId,
-        req.dealerEmail,
+        result1[0].endereco,
         req.body.destinatario,
         req.body.html,
         req.body.assunto,
-        result.messageId,
+        result2.messageId,
         'out',
         JSON.stringify(req.body.anexos),
-        'Enviado',
-        JSON.stringify(result),
+        result2.messageId !== undefined ? 'Enviado' : 'Erro',
+        JSON.stringify(result2),
       ]
     );
     await connection3.end();
@@ -217,30 +246,34 @@ exports.mailgun = async (req, res) => {
   try {
     const connection0 = await mysql.createConnection(dbConfig);
     await connection0.query(
-      'UPDATE leads SET agendamentoContato = NOW() WHERE (email = ?) AND (dealer = ?)',
-      [req.body.sender, 10] // TODO: pegar o codigo do dealer de acordo com a tabela dealerCanais
+      `UPDATE leads SET agendamentoContato = NOW() WHERE (email = ?) AND (dealer in (
+        SELECT dealer
+        FROM dealercanais
+        WHERE (endereco = ?)
+      ))`,
+      [req.body.sender, req.body.recipient]
     );
     await connection0.end();
 
     const connection1 = await mysql.createConnection(dbConfig);
     await connection1.query(
-      'INSERT INTO emails (idDealer, email_loja, email, html, assunto, anexo, data, contentIdMap, direcao, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO emails (email_loja, email, html, assunto, anexo, data, contentIdMap, direcao, status, emResposta) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [
-        10, // TODO: pegar o codigo do dealer de acordo com a tabela dealerCanais
         req.body.recipient,
         req.body.sender,
         req.body['stripped-html'],
         req.body.subject,
-        JSON.stringify(await processarUpload(req.files, 10, null, null)),
+        JSON.stringify(await processarUpload(req.files, null, null, null)),
         new Date(req.body.timestamp * 1000),
         req.body['content-id-map'],
         'in',
         'Recebido',
+        req.body['In-Reply-To'],
       ]
     );
     await connection1.end();
 
-    res.send('ok');
+    return res.send('ok');
   } catch (err) {
     const html = `
         <!doctype html>
@@ -267,7 +300,7 @@ exports.mailgun = async (req, res) => {
 
     tratamentoErros(req, res, err);
 
-    res.send('ok');
+    return res.send('ok');
   }
 
   // ('From', u'Ev Kontsevoy '),
@@ -420,7 +453,7 @@ exports.enviarWhatsApp = async (req, res) => {
             JSON.stringify(result.data),
             queueNumber,
             id,
-            arquivo.mimetype
+            arquivo.mimetype,
           ]
         );
         await connection3.end();
@@ -503,8 +536,7 @@ exports.chatapi = async (req, res) => {
       } else if (req.body.ack[0].status == 'viewed') {
         status = 'Lida';
       } else {
-        res.send('ok');
-        return;
+        return res.send('ok');
       }
 
       const connection3 = await mysql.createConnection(dbConfig);
@@ -515,7 +547,7 @@ exports.chatapi = async (req, res) => {
       await connection3.end();
     }
 
-    res.send('ok');
+    return res.send('ok');
   } catch (err) {
     const html = `
         <!doctype html>
@@ -542,7 +574,7 @@ exports.chatapi = async (req, res) => {
 
     tratamentoErros(req, res, err);
 
-    res.send('ok');
+    return res.send('ok');
   }
 };
 
@@ -558,7 +590,13 @@ exports.upload = async (req, res) => {
 
     return res.status(200).send({
       status: 'ok',
-      arquivos: await processarUpload(req.files, req.body.dealer, req.body.lead, req.userId, req.body.local),
+      arquivos: await processarUpload(
+        req.files,
+        req.body.dealer,
+        req.body.lead,
+        req.userId,
+        req.body.local
+      ),
     });
   } catch (err) {
     tratamentoErros(req, res, err);
@@ -584,7 +622,7 @@ exports.file = async (req, res) => {
     //   headers: { 'Content-Type': result[0].mimetype, 'Content-Disposition': 'attachment; filename="'+result[0].nomeoriginal+'"' },
     // });
 
-    res.sendFile(`${process.env.STORAGE}${req.params.filename}`, {
+    return res.sendFile(`${process.env.STORAGE}${req.params.filename}`, {
       headers: {
         'Content-Type': result[0].mimetype,
         'Content-Disposition': 'filename="' + result[0].nomeoriginal + '"',

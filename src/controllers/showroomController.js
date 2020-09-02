@@ -670,7 +670,7 @@ exports.localizar = async (req, res) => {
 
     let SQLemail = '';
     if (email !== '') {
-      SQLemail = ` and (leads.email = ${email}) `;
+      SQLemail = ` and (leads.email = "${email}") `;
     }
 
     let SQLtelefone = '';
