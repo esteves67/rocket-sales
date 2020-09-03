@@ -5,6 +5,10 @@ const cpfValidator = require('cpf');
 const tratamentoErros = require('../util/tratamentoErros');
 const logLead = require('../util/logLead');
 
+function nullif(valor) {
+  return valor === '' ? null : valor;
+}
+
 // FUNCAO logLead
 //***PARAMETROS*/
 //* ACAO == Mensagens qual ação foi realizada no lead
@@ -473,7 +477,7 @@ exports.listar = async (req, res) => {
     const [
       leads,
     ] = await connection.query(
-      `SELECT leads.id, origem, departamento, leads.nome, user.nome as vendedor, veiculoInteresse, DateTimeFormatPtBr(horaEntrada) as horaEntrada, DateFormatPtBr(horaEntrada) as dataEntrada, DateTimeFormatPtBr(horaSaida) as horaSaida, statusnegociacao, numeropedido, motivodesistencia, testdrive, testdrivemotivo, testdrivehora, DateTimeFormatPtBr(agendamentoContato) agendamentoContato, IF(agendamentoContato < NOW(), IF(agendamentoContato < DATE_ADD(NOW(), INTERVAL - 2 HOUR), 'Ação Pendente Atrasada', 'Ação Pendente'), '') acao FROM leads LEFT JOIN user ON leads.vendedor = user.id WHERE dealer = ? and DATE(horaEntrada) BETWEEN ? AND ? ${SQLstatus} ${SQLvendedor} ${SQLorigem} ORDER BY CASE WHEN statusnegociacao = 'novo' THEN 5 WHEN statusnegociacao in ('sucesso', 'insucesso') THEN 0 ELSE 2 END DESC, leads.agendamentoContato`,
+      `SELECT leads.id, origem, departamento, leads.nome, user.nome as vendedor, veiculoInteresse, DateTimeFormatPtBr(horaEntrada) as horaEntrada, DateFormatPtBr(horaEntrada) as dataEntrada, DateTimeFormatPtBr(horaSaida) as horaSaida, statusnegociacao, numeropedido, motivodesistencia, testdrive, testdrivemotivo, testdrivehora, DateTimeFormatPtBr(agendamentoContato) agendamentoContato, IF(agendamentoContato < NOW(), IF(agendamentoContato < DATE_ADD(NOW(), INTERVAL - 2 HOUR), 'Ação Pendente Atrasada', 'Ação Pendente'), '') acao, finalizadoEm FROM leads LEFT JOIN user ON leads.vendedor = user.id WHERE dealer = ? and DATE(horaEntrada) BETWEEN ? AND ? ${SQLstatus} ${SQLvendedor} ${SQLorigem} ORDER BY CASE WHEN statusnegociacao = 'novo' THEN 5 WHEN statusnegociacao in ('sucesso', 'insucesso') THEN 0 ELSE 2 END DESC, leads.agendamentoContato`,
       [dealer, dataInicial1, dataFinal1]
     );
     await connection.end();
@@ -502,6 +506,8 @@ exports.alterarStatus = async (req, res) => {
       motivoDesistencia,
       agendamentoContato,
       observacao,
+      finalizador,
+      dataVisita,
     } = req.body;
 
     if (
@@ -511,6 +517,7 @@ exports.alterarStatus = async (req, res) => {
       numeroPedido === undefined ||
       motivoDesistencia === undefined ||
       observacao === undefined ||
+      finalizador === undefined ||
       agendamentoContato === undefined
     ) {
       return res.status(400).send({
@@ -540,10 +547,22 @@ exports.alterarStatus = async (req, res) => {
       }
     }
 
+    if (status === 'Visita Agendada') {
+      if (dataVisita === '') {
+        return res.status(400).send({
+          status: 'erro',
+          tipo: 'Validação',
+          mensagem: 'Não foi informado a data da visita.',
+        });
+      }
+    }
+
+    const SQLFinalizadoEm = finalizador == 1 ? ', finalizadoEm = Now()' : ', finalizadoEm = null';
+
     const connection = await mysql.createConnection(dbConfig);
     await connection.query(
-      'UPDATE leads SET statusNegociacao = ?, agendamentoContato = DateTimeFormatPtBrToMysql(?), numeroPedido = NULLIF(?, ""), motivoDesistencia = NULLIF(?, "") WHERE id = ? and dealer = ?;',
-      [status, agendamentoContato, numeroPedido, motivoDesistencia, lead, dealer]
+      `UPDATE leads SET statusNegociacao = ?, agendamentoContato = DateTimeFormatPtBrToMysql(?), numeroPedido = NULLIF(?, ""), motivoDesistencia = NULLIF(?, ""), dataVisita = NULLIF(?, "") ${SQLFinalizadoEm} WHERE id = ? and dealer = ?;`,
+      [status, agendamentoContato, numeroPedido, motivoDesistencia, dataVisita, lead, dealer]
     );
     await connection.end();
 
@@ -593,7 +612,7 @@ exports.selecionarLead = async (req, res) => {
     const [
       dadoslead,
     ] = await connection.query(
-      'SELECT  leads.nome, departamento, origem, cpf, leads.dataNascimento, leads.telefone1, leads.telefone2, leads.email, veiculoInteresse, user.id as vendedor,  leads.comoconheceu, leads.observacao, leads.horaEntrada, user.nome as nomeVendedor, leads.tipoVenda, leads.html FROM leads left JOIN user ON user.id = leads.vendedor WHERE leads.dealer = ? And leads.id = ? ',
+      'SELECT  leads.nome, departamento, origem, cpf, leads.dataNascimento, leads.telefone1, leads.telefone2, leads.email, veiculoInteresse, user.id as vendedor,  leads.comoconheceu, leads.observacao, leads.horaEntrada, user.nome as nomeVendedor, leads.tipoVenda, leads.html, finalizadoEm FROM leads left JOIN user ON user.id = leads.vendedor WHERE leads.dealer = ? And leads.id = ? ',
       [dealer, lead]
     );
     await connection.end();
@@ -743,32 +762,33 @@ exports.avaliacaousado_alterar = async (req, res) => {
     await connection.query(
       'INSERT INTO fichaavaliacaousados (dealer, lead, marca, modelo, versao, anofabricacao, anomodelo, km, placa, chassi, cor) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE marca = ?, modelo = ?, versao = ?, anofabricacao = ?, anomodelo = ?, km = ?, placa = ?, chassi = ?, cor = ?',
       [
-        dealer,
-        lead,
-        marca,
-        modelo,
-        versao,
-        anofabricacao,
-        anomodelo,
-        km,
-        placa,
-        chassi,
-        cor,
-        marca,
-        modelo,
-        versao,
-        anofabricacao,
-        anomodelo,
-        km,
-        placa,
-        chassi,
-        cor,
+        nullif(dealer),
+        nullif(lead),
+        nullif(marca),
+        nullif(modelo),
+        nullif(versao),
+        nullif(anofabricacao),
+        nullif(anomodelo),
+        nullif(km),
+        nullif(placa),
+        nullif(chassi),
+        nullif(cor),
+        nullif(marca),
+        nullif(modelo),
+        nullif(versao),
+        nullif(anofabricacao),
+        nullif(anomodelo),
+        nullif(km),
+        nullif(placa),
+        nullif(chassi),
+        nullif(cor),
       ]
     );
     await connection.end();
 
     return res.status(200).send({
       status: 'ok',
+      mensagem: 'Ficha de avaliação alterada com sucesso!',
     });
   } catch (err) {
     tratamentoErros(req, res, err);
@@ -800,16 +820,18 @@ exports.avaliacaousado_selecionar = async (req, res) => {
     ]);
     await connection.end();
 
-    const connection2 = await mysql.createConnection(dbConfig);
-    const [
-      fotos,
-    ] = await connection2.query(
-      'SELECT id, nome, nomeoriginal, mimetype FROM arquivos WHERE iddealer = ? AND idlead = ? and local = "AvaliacaoUsados"',
-      [dealer, lead]
-    );
-    await connection2.end();
+    if (result.length > 0) {
+      const connection2 = await mysql.createConnection(dbConfig);
+      const [
+        fotos,
+      ] = await connection2.query(
+        `SELECT id, concat('${process.env.STORAGE_HTTP}',nome) nome, nomeoriginal, mimetype FROM arquivos WHERE dealer = ? AND lead = ? and local = "AvaliacaoUsados"`,
+        [dealer, lead]
+      );
+      await connection2.end();
 
-    result[0].fotos = fotos;
+      result[0].fotos = fotos;
+    }
 
     return res.status(200).send({
       status: 'ok',
@@ -837,16 +859,15 @@ exports.avaliacaousado_deletarfoto = async (req, res) => {
     }
 
     const connection = await mysql.createConnection(dbConfig);
-    await connection.query('DELETE FROM arquivos WHERE idlead = ? and iddealer = ? and id = ? and local = "AvaliacaoUsados"', [
-      lead,
-      dealer,
-
-      foto,
-    ]);
+    await connection.query(
+      'DELETE FROM arquivos WHERE lead = ? and dealer = ? and id = ? and local = "AvaliacaoUsados"',
+      [lead, dealer, foto]
+    );
     await connection.end();
 
     return res.status(200).send({
       status: 'ok',
+      mensagem: 'Foto excluída com sucesso!',
     });
   } catch (err) {
     tratamentoErros(req, res, err);

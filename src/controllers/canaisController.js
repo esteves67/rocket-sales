@@ -49,7 +49,7 @@ exports.listarMensagens = async (req, res) => {
     const [
       result1,
     ] = await connection1.query(
-      'SELECT IFNULL(telefone1, 0) as telefone1, IFNULL(telefone2, 0) as telefone2, IFNULL(email, 0) as email, departamento FROM leads where (id = ?) and (dealer = ?)',
+      'SELECT IFNULL(telefone1, 0) as telefone1, IFNULL(telefone2, 0) as telefone2, IFNULL(email, 0) as email, departamento, createdAt, finalizadoEm FROM leads where (id = ?) and (dealer = ?)',
       [req.body.lead, req.body.dealer]
     );
     await connection1.end();
@@ -63,11 +63,13 @@ exports.listarMensagens = async (req, res) => {
         (
           (emails.direcao = 'out') AND
           (emails.dealer = ?) AND
-          (emails.lead = ?)
+          (emails.lead = ?) AND
+          (emails.data BETWEEN DATE_ADD(IFNULL(?, NOW()), INTERVAL -1 HOUR) AND DATE_ADD(IFNULL(?, NOW()), INTERVAL 1 HOUR))
         ) OR
         (
           (emails.direcao = 'in') AND
           (emails.email = ?) AND
+          (emails.data BETWEEN DATE_ADD(IFNULL(?, NOW()), INTERVAL -1 HOUR) AND DATE_ADD(IFNULL(?, NOW()), INTERVAL 1 HOUR)) AND
           (emails.email_loja IN (
             SELECT endereco
             FROM dealercanais
@@ -86,10 +88,12 @@ exports.listarMensagens = async (req, res) => {
         (
           (whatsapp.direcao = 'out') AND
           (whatsapp.dealer = ?) AND
+          (whatsapp.data BETWEEN DATE_ADD(IFNULL(?, NOW()), INTERVAL -1 HOUR) AND DATE_ADD(IFNULL(?, NOW()), INTERVAL 1 HOUR)) AND
           (whatsapp.lead = ?)
         ) OR
         (
           (whatsapp.direcao = 'in') AND
+          (whatsapp.data BETWEEN DATE_ADD(IFNULL(?, NOW()), INTERVAL -1 HOUR) AND DATE_ADD(IFNULL(?, NOW()), INTERVAL 1 HOUR)) AND
           (whatsapp.nro_cliente = ? or whatsapp.nro_cliente = ?) AND
           (whatsapp.instancia IN (
             SELECT chatapi_instance
@@ -106,11 +110,23 @@ exports.listarMensagens = async (req, res) => {
       [
         req.body.dealer,
         req.body.lead,
+        result1[0].createdAt,
+        result1[0].finalizadoEm,
+
         result1[0].email,
+        result1[0].createdAt,
+        result1[0].finalizadoEm,
         req.body.dealer,
         result1[0].departamento,
+
+
         req.body.dealer,
+        result1[0].createdAt,
+        result1[0].finalizadoEm,
         req.body.lead,
+
+        result1[0].createdAt,
+        result1[0].finalizadoEm,
         result1[0].telefone1,
         result1[0].telefone2,
         req.body.dealer,
@@ -246,7 +262,7 @@ exports.mailgun = async (req, res) => {
   try {
     const connection0 = await mysql.createConnection(dbConfig);
     await connection0.query(
-      `UPDATE leads SET agendamentoContato = NOW() WHERE (email = ?) AND (dealer in (
+      `UPDATE leads SET agendamentoContato = NOW(), statusnegociacao = IF(finalizadoEm is null, statusnegociacao, "Em andamento"), finalizadoEm = null WHERE (email = ?) AND (dealer in (
         SELECT dealer
         FROM dealercanais
         WHERE (endereco = ?)
@@ -484,7 +500,7 @@ exports.chatapi = async (req, res) => {
         await connection0.query(
           `
           UPDATE leads
-	          SET agendamentoContato = NOW()
+	          SET agendamentoContato = NOW(), statusnegociacao = IF(finalizadoEm is null, statusnegociacao, "Em andamento"), finalizadoEm = null
           WHERE
             (telefone1 = ? or telefone2 = ?) AND
             (dealer in (
