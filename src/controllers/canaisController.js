@@ -25,7 +25,7 @@ async function processarUpload(files, dealer, lead, user, local) {
     const connection1 = await mysql.createConnection(dbConfig);
     await connection1.query(
       'INSERT INTO arquivos (dealer, lead, user, nome, nomeoriginal, mimetype, tamanho, local) values (?, ?, ?, ?, ?, ?, ?, ?)',
-      [dealer, nullif(lead), user, file.filename, file.originalname, file.mimetype, file.size, local]
+      [nullif(dealer), nullif(lead), user, file.filename, file.originalname, file.mimetype, file.size, local]
     );
     await connection1.end();
 
