@@ -308,7 +308,7 @@ exports.autenticacao = async (req, res) => {
 
         const connection2 = await mysql.createConnection(dbConfig);
         const [rows2] = await connection2.query(
-          'SELECT dealer.nome, dealer.plano, dealer.fabricante, dealer, permissao FROM dealerUsers INNER JOIN dealer on dealerUsers.dealer = dealer.id WHERE user = ? ORDER BY principal DESC',
+          'SELECT dealer.nome, dealer.plano, dealer.fabricante, dealer, permissao, logo, corprincipal FROM dealerUsers INNER JOIN dealer on dealerUsers.dealer = dealer.id WHERE user = ? ORDER BY principal DESC',
           rows[0].id
         );
         await connection2.end();
@@ -328,6 +328,8 @@ exports.autenticacao = async (req, res) => {
             dealerNome: rows2[0].nome,
             dealerPlano: rows2[0].plano,
             dealerFabricante: rows2[0].fabricante,
+            dealerLogo: rows2[0].logo,
+            dealerCorPrincipal: rows2[0].corprincipal,
             permissao: rows2[0].permissao,
             permissoes,
           };
@@ -743,7 +745,7 @@ exports.listarVendedores = async (req, res) => {
   try {
     const connection = await mysql.createConnection(dbConfig);
     const [vendedores] = await connection.query(
-      'SELECT user.id, nome, email, permissao, recebelead FROM user inner join dealerusers on dealerusers.user = user.id WHERE dealer = ?',
+      'SELECT user.id, nome, email, permissao, recebelead, recebelead_vendasnovos, recebelead_vendasusados, recebelead_pcd, recebelead_frota, recebelead_taxi FROM user inner join dealerusers on dealerusers.user = user.id WHERE dealer = ?',
       dealer
     );
     await connection.end();
@@ -821,7 +823,7 @@ exports.alterarPermissao = async (req, res) => {
 
 exports.alterarRecebeLead = async (req, res) => {
   try {
-    const { dealer, user } = req.body;
+    const { dealer, user, tipoLead } = req.body;
 
     if (dealer === undefined || user === undefined) {
       return res.status(400).send({
@@ -831,11 +833,33 @@ exports.alterarRecebeLead = async (req, res) => {
       });
     }
 
+    let SQLtipolead = '';
+
+    if (tipoLead === 'Vendas Novos') {
+      SQLtipolead = '_VendasNovos';
+    }
+
+    if (tipoLead === 'Vendas Usados') {
+      SQLtipolead = '_VendasUsados';
+    }
+
+    if (tipoLead === 'PCD') {
+      SQLtipolead = '_PCD';
+    }
+
+    if (tipoLead === 'Táxi') {
+      SQLtipolead = '_Taxi';
+    }
+
+    if (tipoLead === 'Frota') {
+      SQLtipolead = '_Frota';
+    }
+
     const connection = await mysql.createConnection(dbConfig);
-    await connection.query('UPDATE dealerusers SET recebeLead = !recebeLead WHERE dealer = ? and user = ?', [
-      dealer,
-      user,
-    ]);
+    await connection.query(
+      `UPDATE dealerusers SET recebeLead${SQLtipolead} = !recebeLead${SQLtipolead} WHERE dealer = ? and user = ?`,
+      [dealer, user]
+    );
     await connection.end();
 
     return res.status(200).send({

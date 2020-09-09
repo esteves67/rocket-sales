@@ -18,6 +18,8 @@ exports.cadastro = async (req, res) => {
       dealer.nome === undefined ||
       dealer.fabricante === undefined ||
       dealer.plano === undefined ||
+      dealer.logo === undefined ||
+      dealer.corprincipal === undefined ||
       dealer.contaFaturamento === undefined
     ) {
       return res.status(400).send({
@@ -97,6 +99,8 @@ exports.cadastro = async (req, res) => {
           dealerNome: dealer.nome,
           dealerPlano: dealer.plano,
           dealerFabricante: dealer.fabricante,
+          dealerLogo: dealer.logo,
+          dealerCorPrincipal: dealer.corprincipal,
           permissao: 4,
           permissoes,
         },
@@ -128,6 +132,8 @@ exports.editar = async (req, res) => {
       dealer.nome === undefined ||
       dealer.fabricante === undefined ||
       dealer.plano === undefined ||
+      dealer.logo === undefined ||
+      dealer.corprincipal === undefined ||
       dealer.contaFaturamento === undefined
     ) {
       return res.status(400).send({
@@ -185,12 +191,14 @@ exports.editar = async (req, res) => {
       const [
         result,
       ] = await connection.query(
-        'UPDATE dealer SET nome = ?, fabricante = ?, plano = ?, contaFaturamento = ? where id = ?',
+        'UPDATE dealer SET nome = ?, fabricante = ?, plano = ?, contaFaturamento = ?, logo = ?, corprincipal = ? where id = ?',
         [
           dealer.nome,
           dealer.fabricante,
           dealer.plano,
           dealer.contaFaturamento,
+          dealer.logo,
+          dealer.corprincipal,
           dealer.dealer,
         ]
       );
@@ -224,7 +232,7 @@ exports.listar = async (req, res) => {
     const [
       dealers,
     ] = await connection.query(
-      'SELECT dealer.id, dealer.nome, fabricante, permissoes.nome as permissao, dealerUsers.principal FROM dealerUsers INNER JOIN dealer ON dealerUsers.dealer = dealer.id INNER JOIN permissoes on dealerusers.permissao = permissoes.id WHERE user = ?',
+      'SELECT dealer.id, dealer.nome, fabricante, permissoes.nome as permissao, dealerUsers.principal, logo, corprincipal FROM dealerUsers INNER JOIN dealer ON dealerUsers.dealer = dealer.id INNER JOIN permissoes on dealerusers.permissao = permissoes.id WHERE user = ?',
       [req.userId]
     );
     await connection.end();
@@ -383,7 +391,7 @@ exports.dealer = async (req, res) => {
   try {
     const connection = await mysql.createConnection(dbConfig);
     const [loja] = await connection.query(
-      'SELECT nome, fabricante, contaFaturamento, plano FROM dealer where id = ?',
+      'SELECT nome, fabricante, contaFaturamento, plano, logo, corprincipal FROM dealer where id = ?',
       dealer
     );
     await connection.end();
@@ -410,7 +418,7 @@ exports.mudarLoja = async (req, res) => {
   try {
     const connection = await mysql.createConnection(dbConfig);
     const [loja] = await connection.query(
-      'SELECT nome, fabricante, contaFaturamento, plano FROM dealer where id = ?',
+      'SELECT nome, fabricante, contaFaturamento, plano, corprincipal, logo FROM dealer where id = ?',
       dealer
     );
     await connection.end();
@@ -421,7 +429,7 @@ exports.mudarLoja = async (req, res) => {
     const [
       rows2,
     ] = await connection2.query(
-      'SELECT dealer.nome, dealer.plano, dealer.fabricante, dealer, permissao FROM dealerUsers INNER JOIN dealer on dealerUsers.dealer = dealer.id WHERE user = ? and dealer = ?',
+      'SELECT dealer.nome, dealer.plano, dealer.fabricante, dealer, permissao, logo, corprincipal FROM dealerUsers INNER JOIN dealer on dealerUsers.dealer = dealer.id WHERE user = ? and dealer = ?',
       [req.userId, dealer]
     );
     await connection2.end();
@@ -441,6 +449,8 @@ exports.mudarLoja = async (req, res) => {
         dealerNome: rows2[0].nome,
         dealerPlano: rows2[0].plano,
         dealerFabricante: rows2[0].fabricante,
+        dealerLogo: rows2[0].logo,
+        dealerCorPrincipal: rows2[0].corprincipal,
         permissao: rows2[0].permissao,
         permissoes,
       };

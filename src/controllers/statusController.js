@@ -25,7 +25,7 @@ exports.listar = async (req, res) => {
       const [
         lista_status,
       ] = await connection1.query(
-        'select distinct status, finalizador from dealerdepartamentosstatus where dealerdepartamentosstatus.dealer = ?',
+        'select distinct status, finalizador, ativo, acao from dealerdepartamentosstatus where dealerdepartamentosstatus.dealer = ?',
         [dealer]
       );
       await connection1.end();
@@ -49,7 +49,7 @@ exports.listar = async (req, res) => {
     const [
       lista_status,
     ] = await connection1.query(
-      'select distinct status, finalizador from dealerdepartamentosstatus where dealerdepartamentosstatus.dealer = ? and dealerdepartamentosstatus.departamento = ?',
+      'select distinct status, finalizador, ativo, acao from dealerdepartamentosstatus where dealerdepartamentosstatus.dealer = ? and dealerdepartamentosstatus.departamento = ?',
       [dealer, result[0].departamento]
     );
     await connection1.end();

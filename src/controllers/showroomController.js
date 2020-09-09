@@ -5,8 +5,49 @@ const cpfValidator = require('cpf');
 const tratamentoErros = require('../util/tratamentoErros');
 const logLead = require('../util/logLead');
 
+const dbConfig = {
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASS,
+  database: process.env.DB_NAME,
+};
+
+
 function nullif(valor) {
   return valor === '' ? null : valor;
+}
+
+async function vendedorDaVez(tipoCadastramento, tipoLead, dealer) {
+  if (tipoLead === 'Peças' || tipoLead === 'Pós-Vendas') return 0;
+
+  let SQLtipo = 'ultimadistribuicao_interna';
+
+  if (tipoCadastramento === 'externo') SQLtipo = 'ultimadistribuicao_externa';
+
+  const connection = await mysql.createConnection(dbConfig);
+  const [result] = await connection.query(
+    `SELECT user
+    FROM dealerusers
+    where recebelead_${tipoLead.replace(' ', '').replace('Táxi', 'taxi')} = 1
+    order by ${SQLtipo} LIMIT 1`,
+    [dealer]
+  );
+  await connection.end();
+
+  if (result.length > 0) {
+    const atendente = result[0].user;
+
+    const connection2 = await mysql.createConnection(dbConfig);
+    await connection2.query(
+      `UPDATE dealerusers set ${SQLtipo} = NOW() WHERE dealer = ? and user = ?`,
+      [dealer, atendente]
+    );
+    await connection2.end();
+
+    return atendente;
+  }
+
+  return 0;
 }
 
 // FUNCAO logLead
@@ -17,12 +58,6 @@ function nullif(valor) {
 //* lead ==  Codigo do lead
 //* observacao  == Motivos (PODE SER NULL)
 
-const dbConfig = {
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASS,
-  database: process.env.DB_NAME,
-};
 
 exports.cadastro = async (req, res) => {
   try {
@@ -131,7 +166,9 @@ exports.cadastro = async (req, res) => {
         telefone1.replace(/\D/g, ''),
         email,
         veiculoInteresse,
-        vendedor,
+        vendedor === ''
+          ? await vendedorDaVez('interno', tipoVenda === '' ? departamento : tipoVenda, dealer)
+          : vendedor,
         comoconheceu,
         horaEntrada1,
         observacao,
@@ -561,8 +598,8 @@ exports.alterarStatus = async (req, res) => {
 
     const connection = await mysql.createConnection(dbConfig);
     await connection.query(
-      `UPDATE leads SET statusNegociacao = ?, agendamentoContato = DateTimeFormatPtBrToMysql(?), numeroPedido = NULLIF(?, ""), motivoDesistencia = NULLIF(?, ""), dataVisita = NULLIF(?, "") ${SQLFinalizadoEm} WHERE id = ? and dealer = ?;`,
-      [status, agendamentoContato, numeroPedido, motivoDesistencia, dataVisita, lead, dealer]
+      `UPDATE leads SET statusNegociacao = ?, agendamentoContato = DateTimeFormatPtBrToMysql(?), numeroPedido = NULLIF(?, ""), motivoDesistencia = NULLIF(?, ""), dataVisita = DateTimeFormatPtBrToMysql(?) ${SQLFinalizadoEm} WHERE id = ? and dealer = ?;`,
+      [status, (dataVisita === '') ? agendamentoContato : dataVisita, numeroPedido, motivoDesistencia, dataVisita, lead, dealer]
     );
     await connection.end();
 
@@ -612,7 +649,7 @@ exports.selecionarLead = async (req, res) => {
     const [
       dadoslead,
     ] = await connection.query(
-      'SELECT  leads.nome, departamento, origem, cpf, leads.dataNascimento, leads.telefone1, leads.telefone2, leads.email, veiculoInteresse, user.id as vendedor,  leads.comoconheceu, leads.observacao, leads.horaEntrada, user.nome as nomeVendedor, leads.tipoVenda, leads.html, finalizadoEm FROM leads left JOIN user ON user.id = leads.vendedor WHERE leads.dealer = ? And leads.id = ? ',
+      'SELECT  leads.nome, departamento, origem, cpf, leads.dataNascimento, leads.telefone1, leads.telefone2, leads.email, veiculoInteresse, user.id as vendedor,  leads.comoconheceu, leads.observacao, DateTimeFormatPtBr(leads.horaEntrada) horaEntrada, user.nome as nomeVendedor, leads.tipoVenda, leads.html, DateTimeFormatPtBr(finalizadoEm) finalizadoEm, statusNegociacao, DateTimeFormatPtBr(agendamentoContato) agendamentoContato, DateTimeFormatPtBr(dataVisita) dataVisita, numeroPedido, motivoDesistencia FROM leads left JOIN user ON user.id = leads.vendedor WHERE leads.dealer = ? And leads.id = ? ',
       [dealer, lead]
     );
     await connection.end();
@@ -722,6 +759,64 @@ exports.localizar = async (req, res) => {
     });
   }
 };
+
+exports.outrosLeads = async (req, res) => {
+  try {
+    const { dealer, telefone, email, cpf } = req.body;
+    if (
+      dealer === undefined ||
+      cpf === undefined ||
+      telefone === undefined ||
+      email === undefined
+    ) {
+      return res.status(400).send({
+        status: 'erro',
+        tipo: 'Falha na Chamada',
+        mensagem: 'Requisição inválida.',
+      });
+    }
+
+    let SQLvendedor = '';
+    if (vendedores !== '') {
+      SQLvendedor = ` and vendedor in (${vendedores}) `;
+    }
+
+    let SQLemail = '';
+    if (email !== '') {
+      SQLemail = ` and (leads.email = "${email}") `;
+    }
+
+    let SQLtelefone = '';
+    if (telefone !== '') {
+      SQLtelefone = ` and (leads.telefone1 = ${telefone.replace(
+        /\D/g,
+        ''
+      )} or leads.telefone2 = ${telefone.replace(/\D/g, '')}) `;
+    }
+
+    const connection = await mysql.createConnection(dbConfig);
+    const [
+      leads,
+    ] = await connection.query(
+      `SELECT leads.id, origem, departamento, leads.nome, user.nome as vendedor, veiculoInteresse, DateTimeFormatPtBr(horaEntrada) as horaEntrada, DateFormatPtBr(horaEntrada) as dataEntrada, DateTimeFormatPtBr(horaSaida) as horaSaida, statusnegociacao, numeropedido, motivodesistencia, testdrive, testdrivemotivo, testdrivehora, DateTimeFormatPtBr(agendamentoContato) agendamentoContato, IF(agendamentoContato < NOW(), IF(agendamentoContato < DATE_ADD(NOW(), INTERVAL - 2 HOUR), 'Ação Pendente Atrasada', 'Ação Pendente'), '') acao FROM leads LEFT JOIN user ON leads.vendedor = user.id WHERE dealer = ? ${SQLemail} ${SQLtelefone} ${SQLvendedor} and leads.createdAt >= DATE_ADD(NOW(), INTERVAL - 30 DAY) ORDER BY CASE WHEN statusnegociacao = 'novo' THEN 5 WHEN statusnegociacao in ('sucesso', 'insucesso') THEN 0 ELSE 2 END DESC, agendamentoContato`,
+      [dealer]
+    );
+    await connection.end();
+
+    return res.status(200).send({
+      status: 'ok',
+      leads,
+    });
+  } catch (err) {
+    tratamentoErros(req, res, err);
+    return res.status(400).send({
+      status: 'erro',
+      tipo: 'Erro de Servidor',
+      mensagem: 'Erro ao obter a lista de leads.',
+    });
+  }
+};
+
 
 exports.avaliacaousado_alterar = async (req, res) => {
   try {
@@ -875,6 +970,70 @@ exports.avaliacaousado_deletarfoto = async (req, res) => {
       status: 'erro',
       tipo: 'Erro de Servidor',
       mensagem: 'Erro ao deletar a foto.',
+    });
+  }
+};
+
+exports.painel = async (req, res) => {
+  try {
+    const { dealer } = req.body;
+
+    if (dealer === undefined) {
+      return res.status(400).send({
+        status: 'erro',
+        tipo: 'Falha na Chamada',
+        mensagem: 'Requisição inválida.',
+      });
+    }
+
+    const resultado = {};
+
+    const connection = await mysql.createConnection(dbConfig);
+    const [totais] = await connection.query(
+      `SELECT count(*) qtde
+      FROM dealerusers INNER JOIN user on dealerusers.user = user.id INNER JOIN permissoes on dealerusers.permissao = permissoes.id
+      WHERE dealer = ? AND permissoes.nome = 'Recepcionista';`,
+      [dealer]
+    );
+    await connection.end();
+
+    const connection2 = await mysql.createConnection(dbConfig);
+    const [consultores] = await connection2.query(
+      `SELECT user.id, user.nome
+      FROM dealerusers INNER JOIN user on dealerusers.user = user.id INNER JOIN permissoes on dealerusers.permissao = permissoes.id
+      WHERE dealer = ? AND permissoes.nome = 'Recepcionista';`,
+      [dealer]
+    );
+    await connection2.end();
+
+    resultado.qtde = totais[0].qtde;
+    resultado.consultores = consultores;
+
+    for (let index = 0; index < consultores.length; index++) {
+      const consultor = consultores[index];
+
+      const connection3 = await mysql.createConnection(dbConfig);
+      const [visitas] = await connection3.query(
+        `SELECT nome, DateTimeFormatPtBr(datavisita) dataVisita, origem
+        FROM ROCKETSALES.LEADS
+        WHERE STATUSNEGOCIACAO = 'Visita Agendada' AND     DEALER = ? and vendedor = ?;`,
+        [dealer, consultor.id]
+      );
+      await connection3.end();
+
+      resultado.consultores[index].visitas = visitas;
+    }
+
+    return res.status(200).send({
+      status: 'ok',
+      resultado,
+    });
+  } catch (err) {
+    tratamentoErros(req, res, err);
+    return res.status(400).send({
+      status: 'erro',
+      tipo: 'Erro de Servidor',
+      mensagem: 'Erro ao obter ao lead.',
     });
   }
 };

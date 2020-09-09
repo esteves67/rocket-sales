@@ -16,6 +16,8 @@ router.get('/selecionarLead', auth, authDealer, controller.selecionarLead);
 router.get('/listarLog', auth, authDealer, controller.listarLog);
 router.get('/localizar', auth, authDealer, controller.localizar);
 
+router.get('/painel', auth, authDealer, controller.painel);
+
 
 router.post('/avaliacaousado/alterar', auth, authDealer, controller.avaliacaousado_alterar);
 router.post('/avaliacaousado/deletarfoto', auth, authDealer, controller.avaliacaousado_deletarfoto);

@@ -10,6 +10,10 @@ const dbConfig = {
   database: process.env.DB_NAME,
 };
 
+function nullif(valor) {
+  return valor === '' ? null : valor;
+}
+
 async function processarUpload(files, dealer, lead, user, local) {
   const ret_files = [];
 
@@ -21,7 +25,7 @@ async function processarUpload(files, dealer, lead, user, local) {
     const connection1 = await mysql.createConnection(dbConfig);
     await connection1.query(
       'INSERT INTO arquivos (dealer, lead, user, nome, nomeoriginal, mimetype, tamanho, local) values (?, ?, ?, ?, ?, ?, ?, ?)',
-      [dealer, lead, user, file.filename, file.originalname, file.mimetype, file.size, local]
+      [dealer, nullif(lead), user, file.filename, file.originalname, file.mimetype, file.size, local]
     );
     await connection1.end();
 
@@ -56,7 +60,7 @@ exports.listarMensagens = async (req, res) => {
 
     const connection = await mysql.createConnection(dbConfig);
     const [resultEm] = await connection.query(
-      `SELECT user.nome nomeUsuario, 'E-mail' as tipo, emails.direcao, emails.email_loja endereco_loja, emails.email endereco_cliente, emails.assunto, emails.html mensagem, emails.anexo, emails.contentIdMap, DateTimeFormatPtBr(emails.data) data, emails.status, '' emResposta, '' mimetype
+      `SELECT user.nome nomeUsuario, 'E-mail' as tipo, emails.direcao, emails.email_loja endereco_loja, emails.email endereco_cliente, emails.assunto, emails.html mensagem, emails.anexo, emails.contentIdMap, data dataoriginal, DateTimeFormatPtBr(emails.data) data, emails.status, '' mimetype, '' emresposta_mensagem, '' emresposta_mimetype
       FROM
         emails left join user on emails.user = user.id
       WHERE
@@ -81,9 +85,10 @@ exports.listarMensagens = async (req, res) => {
           ))
         )
         UNION
-        SELECT user.nome, 'WhatsApp', whatsapp.direcao, whatsapp.nro_loja, whatsapp.nro_cliente, '' assunto, whatsapp.mensagem, '' anexo, '' contentIdMap, DateTimeFormatPtBr(whatsapp.data) data, whatsapp.status, emResposta, mimetype
+        SELECT user.nome, 'WhatsApp', whatsapp.direcao, whatsapp.nro_loja, whatsapp.nro_cliente, '' assunto, whatsapp.mensagem, '' anexo, '' contentIdMap, whatsapp.data dataoriginal, DateTimeFormatPtBr(whatsapp.data) data, whatsapp.status, whatsapp.mimetype, whatsapp_emresposta.mensagem emresposta_mensagem, whatsapp_emresposta.mimetype emresposta_mimetype
         FROM
           whatsapp left join user on whatsapp.user = user.id
+          left join whatsapp as whatsapp_emresposta on whatsapp.emrespostachatid = whatsapp_emresposta.chatid
         WHERE
         (
           (whatsapp.direcao = 'out') AND
@@ -105,7 +110,7 @@ exports.listarMensagens = async (req, res) => {
               (tipo = 'WhatsApp')
           ))
         )
-        ORDER BY data
+        ORDER BY dataoriginal
         `,
       [
         req.body.dealer,
@@ -526,7 +531,7 @@ exports.chatapi = async (req, res) => {
 
         const connection3 = await mysql.createConnection(dbConfig);
         await connection3.query(
-          'INSERT INTO whatsapp (direcao, instancia, nro_loja, nro_cliente, mensagem, emResposta, status, status_response, queuenumber, chatId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          'INSERT INTO whatsapp (direcao, instancia, nro_loja, nro_cliente, mensagem, emResposta, emRespostaChatId, status, status_response, queuenumber, chatId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
           [
             'in',
             req.body.instanceId,
@@ -534,6 +539,7 @@ exports.chatapi = async (req, res) => {
             celular,
             req.body.messages[0].body,
             req.body.messages[0].quotedMsgBody,
+            req.body.messages[0].quotedMsgId,
             'Recebida',
             JSON.stringify(req.body),
             req.body.messages[0].messageNumber,
