@@ -448,7 +448,7 @@ exports.aceitarConvite = async (req, res) => {
       const connection3 = await mysql.createConnection(dbConfig);
       const [
         rows3,
-      ] = await connection3.query('SELECT nome, fabricante, plano FROM dealer WHERE (id = ?)', [
+      ] = await connection3.query('SELECT nome, fabricante, plano, logo, corprincipal FROM dealer WHERE (id = ?)', [
         rows[0].dealer,
       ]);
       await connection3.end();
@@ -467,6 +467,8 @@ exports.aceitarConvite = async (req, res) => {
           dealerNome: rows3[0].nome,
           dealerPlano: rows3[0].plano,
           dealerFabricante: rows3[0].fabricante,
+          dealerLogo: rows3[0].logo,
+          dealerCorPrincipal: rows3[0].corprincipal,
           permissao: rows[0].permissao,
           permissoes,
         },
