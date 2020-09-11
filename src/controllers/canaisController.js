@@ -150,9 +150,9 @@ exports.listarMensagens = async (req, res) => {
             const key = Object.entries(contentIdMap)[k][0];
             const cid = `cid:${key.replace('<', '').replace('>', '')}`;
             const attachment = contentIdMap[key].replace('attachment-', '') - 1;
-            if (resultEm[i].html.search(cid) > 0) {
-              resultEm[i].html = resultEm[i].html.replace(cid, anexos[attachment]['caminho']);
-              anexos.splice(attachment);
+            if (resultEm[i].mensagem.search(cid) > 0) {
+              resultEm[i].mensagem = resultEm[i].mensagem.replace(cid, anexos[attachment]['caminho']);
+              //anexos.slice(attachment);
             }
           }
         }

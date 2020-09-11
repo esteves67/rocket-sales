@@ -305,7 +305,9 @@ exports.atualizar = async (req, res) => {
         telefone2.replace(/\D/g, ''),
         email,
         veiculoInteresse,
-        vendedor,
+        vendedor === ''
+        ? await vendedorDaVez('interno', tipoVenda === '' ? departamento : tipoVenda, dealer)
+        : vendedor,
         observacao,
         comoconheceu,
         tipoVenda,
@@ -705,11 +707,12 @@ exports.listarLog = async (req, res) => {
 
 exports.localizar = async (req, res) => {
   try {
-    const { dealer, vendedores, telefone, email } = req.body;
+    const { dealer, vendedores, telefone, email, cpf } = req.body;
     if (
       dealer === undefined ||
       vendedores === undefined ||
       telefone === undefined ||
+      cpf === undefined ||
       email === undefined
     ) {
       return res.status(400).send({
@@ -729,6 +732,11 @@ exports.localizar = async (req, res) => {
       SQLemail = ` and (leads.email = "${email}") `;
     }
 
+    let SQLcpf = '';
+    if (cpf !== '') {
+      SQLcpf = ` and (digits(leads.cpf) = '${cpf.replace(/\D/g, '')}') `;
+    }
+
     let SQLtelefone = '';
     if (telefone !== '') {
       SQLtelefone = ` and (leads.telefone1 = ${telefone.replace(
@@ -741,7 +749,7 @@ exports.localizar = async (req, res) => {
     const [
       leads,
     ] = await connection.query(
-      `SELECT leads.id, origem, departamento, leads.nome, user.nome as vendedor, veiculoInteresse, DateTimeFormatPtBr(horaEntrada) as horaEntrada, DateFormatPtBr(horaEntrada) as dataEntrada, DateTimeFormatPtBr(horaSaida) as horaSaida, statusnegociacao, numeropedido, motivodesistencia, testdrive, testdrivemotivo, testdrivehora, DateTimeFormatPtBr(agendamentoContato) agendamentoContato, IF(agendamentoContato < NOW(), IF(agendamentoContato < DATE_ADD(NOW(), INTERVAL - 2 HOUR), 'Ação Pendente Atrasada', 'Ação Pendente'), '') acao FROM leads LEFT JOIN user ON leads.vendedor = user.id WHERE dealer = ? ${SQLemail} ${SQLtelefone} ${SQLvendedor} and leads.createdAt >= DATE_ADD(NOW(), INTERVAL - 30 DAY) ORDER BY CASE WHEN statusnegociacao = 'novo' THEN 5 WHEN statusnegociacao in ('sucesso', 'insucesso') THEN 0 ELSE 2 END DESC, agendamentoContato`,
+      `SELECT leads.id, origem, departamento, leads.nome, user.nome as vendedor, veiculoInteresse, DateTimeFormatPtBr(horaEntrada) as horaEntrada, DateFormatPtBr(horaEntrada) as dataEntrada, DateTimeFormatPtBr(horaSaida) as horaSaida, statusnegociacao, numeropedido, motivodesistencia, testdrive, testdrivemotivo, testdrivehora, DateTimeFormatPtBr(agendamentoContato) agendamentoContato, IF(agendamentoContato < NOW(), IF(agendamentoContato < DATE_ADD(NOW(), INTERVAL - 2 HOUR), 'Ação Pendente Atrasada', 'Ação Pendente'), '') acao FROM leads LEFT JOIN user ON leads.vendedor = user.id WHERE dealer = ? ${SQLcpf} ${SQLemail} ${SQLtelefone} ${SQLvendedor} and leads.createdAt >= DATE_ADD(NOW(), INTERVAL - 30 DAY) ORDER BY CASE WHEN statusnegociacao = 'novo' THEN 5 WHEN statusnegociacao in ('sucesso', 'insucesso') THEN 0 ELSE 2 END DESC, agendamentoContato`,
       [dealer]
     );
     await connection.end();
@@ -992,7 +1000,7 @@ exports.painel = async (req, res) => {
     const [totais] = await connection.query(
       `SELECT count(*) qtde
       FROM dealerusers INNER JOIN user on dealerusers.user = user.id INNER JOIN permissoes on dealerusers.permissao = permissoes.id
-      WHERE dealer = ? AND permissoes.nome = 'Recepcionista';`,
+      WHERE dealer = ? AND permissoes.allow_AparecerNoPainel = 1;`,
       [dealer]
     );
     await connection.end();
@@ -1001,7 +1009,7 @@ exports.painel = async (req, res) => {
     const [consultores] = await connection2.query(
       `SELECT user.id, user.nome
       FROM dealerusers INNER JOIN user on dealerusers.user = user.id INNER JOIN permissoes on dealerusers.permissao = permissoes.id
-      WHERE dealer = ? AND permissoes.nome = 'Recepcionista';`,
+      WHERE dealer = ? AND permissoes.allow_AparecerNoPainel = 1;`,
       [dealer]
     );
     await connection2.end();
