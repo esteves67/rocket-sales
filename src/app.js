@@ -8,8 +8,8 @@ const app = express();
 app.use(cors());
 
 // * para o express identificar parametros via url e json
-app.use(express.urlencoded({ extended: false }));
-app.use(express.json());
+app.use(express.urlencoded({ limit: '50000', extended: false }));
+app.use(express.json())
 
 app.use(express.static(__dirname + '/../public'));
 

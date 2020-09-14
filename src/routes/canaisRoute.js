@@ -6,8 +6,9 @@ const { auth, authDealer } = require('../util/auth');
 const upload = multer({ dest: process.env.STORAGE });
 const router = express.Router();
 
-
 router.get('/listarCanais', auth, authDealer, controller.listarCanais);
+
+router.get('/verificarNumeroWhatsApp', auth, controller.verificarNumeroWhatsApp);
 
 router.post('/enviarEmail', auth, authDealer, controller.enviarEmail);
 router.post('/enviarWhatsapp', auth, authDealer, controller.enviarWhatsApp);

@@ -1,7 +1,21 @@
+const venom = require('venom-bot');
 const axios = require('axios');
 const mysql = require('mysql2/promise');
 const transporter = require('../util/nodemailer');
 const tratamentoErros = require('../util/tratamentoErros');
+
+async function filter(arr, callback) {
+  const fail = Symbol();
+  return (
+    await Promise.all(arr.map(async (item) => ((await callback(item)) ? item : fail)))
+  ).filter((i) => i !== fail);
+}
+
+let venomClient = null;
+async function startVenomClient() {
+  venomClient = await venom.create();
+}
+startVenomClient();
 
 const dbConfig = {
   host: process.env.DB_HOST,
@@ -25,7 +39,16 @@ async function processarUpload(files, dealer, lead, user, local) {
     const connection1 = await mysql.createConnection(dbConfig);
     await connection1.query(
       'INSERT INTO arquivos (dealer, lead, user, nome, nomeoriginal, mimetype, tamanho, local) values (?, ?, ?, ?, ?, ?, ?, ?)',
-      [nullif(dealer), nullif(lead), user, file.filename, file.originalname, file.mimetype, file.size, local]
+      [
+        nullif(dealer),
+        nullif(lead),
+        user,
+        file.filename,
+        file.originalname,
+        file.mimetype,
+        file.size,
+        local,
+      ]
     );
     await connection1.end();
 
@@ -38,6 +61,36 @@ async function processarUpload(files, dealer, lead, user, local) {
 
   return ret_files;
 }
+
+async function consultarWhatsApp(celular) {
+  try {
+    const response = await venomClient.getNumberProfile('55' + celular.toString() + '@c.us');
+
+    if (response.status === 200) {
+      return true;
+    }
+    return false;
+  } catch {
+    return true;
+  }
+}
+
+exports.consultarWhatsApp = consultarWhatsApp;
+
+exports.verificarNumeroWhatsApp = async (req, res) => {
+  try {
+    return res.status(200).send({
+      status: 'ok',
+      whatsApp: await consultarWhatsApp(req.body.telefone),
+    });
+  } catch (error) {
+    return res.status(400).send({
+      status: 'erro',
+      tipo: 'Falha na Chamada',
+      mensagem: 'Requisição inválida.',
+    });
+  }
+};
 
 exports.listarMensagens = async (req, res) => {
   if (req.body.dealer === undefined || req.body.lead === undefined) {
@@ -85,6 +138,9 @@ exports.listarMensagens = async (req, res) => {
           ))
         )
         UNION
+        SELECT 'Sistema' nome, 'Telefone', direcao, nro_loja, nro_cliente, '' assunto, 'Ligação no ramal 2222. Tempo 20 segundos. Status Ocupado' mensagem, '' anexo, '' contentIdMap, data dataoriginal, DateTimeFormatPtBr(data) data, '' status, '' mimetype,  '' emresposta_mensagem,  '' emresposta_mimetype
+        FROM telefone
+        UNION
         SELECT user.nome, 'WhatsApp', whatsapp.direcao, whatsapp.nro_loja, whatsapp.nro_cliente, '' assunto, whatsapp.mensagem, '' anexo, '' contentIdMap, whatsapp.data dataoriginal, DateTimeFormatPtBr(whatsapp.data) data, whatsapp.status, whatsapp.mimetype, whatsapp_emresposta.mensagem emresposta_mensagem, whatsapp_emresposta.mimetype emresposta_mimetype
         FROM
           whatsapp left join user on whatsapp.user = user.id
@@ -124,7 +180,6 @@ exports.listarMensagens = async (req, res) => {
         req.body.dealer,
         result1[0].departamento,
 
-
         req.body.dealer,
         result1[0].createdAt,
         result1[0].finalizadoEm,
@@ -151,7 +206,10 @@ exports.listarMensagens = async (req, res) => {
             const cid = `cid:${key.replace('<', '').replace('>', '')}`;
             const attachment = contentIdMap[key].replace('attachment-', '') - 1;
             if (resultEm[i].mensagem.search(cid) > 0) {
-              resultEm[i].mensagem = resultEm[i].mensagem.replace(cid, anexos[attachment]['caminho']);
+              resultEm[i].mensagem = resultEm[i].mensagem.replace(
+                cid,
+                anexos[attachment]['caminho']
+              );
               //anexos.slice(attachment);
             }
           }
@@ -673,28 +731,31 @@ exports.listarCanais = async (req, res) => {
     const connection1 = await mysql.createConnection(dbConfig);
     const [result] = await connection1.query(
       `SELECT
-      dealercanais.id,
-      dealercanais.tipo,
-      dealercanais.endereco remetente,
-      digits(telefone1) as destinatario
-    FROM leads inner join dealercanais on leads.dealer = dealercanais.dealer and leads.departamento = dealercanais.departamento
-    where (leads.id = ?) and (leads.dealer = ?) and (tipo = 'whatsapp') and (digits(telefone1) is not null)
-    union
-    SELECT
-      dealercanais.id,
-      dealercanais.tipo,
-      dealercanais.endereco remetente,
-      digits(telefone2) as destinatario
-    FROM leads inner join dealercanais on leads.dealer = dealercanais.dealer and leads.departamento = dealercanais.departamento
-    where (leads.id = ?) and (leads.dealer = ?) and (tipo = 'whatsapp') and (digits(telefone2) is not null)
-    union
-    SELECT
-      dealercanais.id,
-      dealercanais.tipo,
-      dealercanais.endereco remetente,
-      email as destinatario
-    FROM leads inner join dealercanais on leads.dealer = dealercanais.dealer and leads.departamento = dealercanais.departamento
-    where (leads.id = ?) and (leads.dealer = ?) and (tipo = 'e-mail') and (EMAIL is not null)
+        dealercanais.id,
+        dealercanais.tipo,
+        dealercanais.endereco remetente,
+        digits(telefone1) as destinatario,
+        telefone1Whatsapp as whatsapp
+      FROM leads inner join dealercanais on leads.dealer = dealercanais.dealer and leads.departamento = dealercanais.departamento
+      where (leads.id = ?) and (leads.dealer = ?) and (tipo = 'whatsapp') and (digits(telefone1) is not null)
+      union
+      SELECT
+        dealercanais.id,
+        dealercanais.tipo,
+        dealercanais.endereco remetente,
+        digits(telefone2) as destinatario,
+        telefone2Whatsapp as whatsapp
+      FROM leads inner join dealercanais on leads.dealer = dealercanais.dealer and leads.departamento = dealercanais.departamento
+      where (leads.id = ?) and (leads.dealer = ?) and (tipo = 'whatsapp') and (digits(telefone2) is not null)
+      union
+      SELECT
+        dealercanais.id,
+        dealercanais.tipo,
+        dealercanais.endereco remetente,
+        email as destinatario,
+        0 as whatsapp
+      FROM leads inner join dealercanais on leads.dealer = dealercanais.dealer and leads.departamento = dealercanais.departamento
+      where (leads.id = ?) and (leads.dealer = ?) and (tipo = 'e-mail') and (EMAIL is not null)
     `,
       [
         req.body.lead,
@@ -707,9 +768,16 @@ exports.listarCanais = async (req, res) => {
     );
     await connection1.end();
 
+    const result2 = await filter(result, async (item) => {
+      if (item.tipo === 'WhatsApp' && item.whatsapp == 0) {
+        return await consultarWhatsApp(item.destinatario);
+      }
+      return true;
+    });
+
     return res.status(200).send({
       status: 'ok',
-      result,
+      result: result2,
     });
   } catch (err) {
     tratamentoErros(req, res, err);

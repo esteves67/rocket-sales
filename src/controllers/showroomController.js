@@ -3,6 +3,8 @@ const moment = require('moment');
 const validator = require('validator');
 const cpfValidator = require('cpf');
 const tratamentoErros = require('../util/tratamentoErros');
+const { consultarWhatsApp } = require('./canaisController');
+
 const logLead = require('../util/logLead');
 
 const dbConfig = {
@@ -11,7 +13,6 @@ const dbConfig = {
   password: process.env.DB_PASS,
   database: process.env.DB_NAME,
 };
-
 
 function nullif(valor) {
   return valor === '' ? null : valor;
@@ -57,7 +58,6 @@ async function vendedorDaVez(tipoCadastramento, tipoLead, dealer) {
 //* dealer == Codigo do dealer responsavel pela ação
 //* lead ==  Codigo do lead
 //* observacao  == Motivos (PODE SER NULL)
-
 
 exports.cadastro = async (req, res) => {
   try {
@@ -160,10 +160,11 @@ exports.cadastro = async (req, res) => {
     const [
       result,
     ] = await connection.query(
-      'INSERT INTO leads (nome, telefone1, email, veiculoInteresse,  vendedor, comoconheceu, horaEntrada, observacao, dealer, origem, createdBy, departamento, tipoVenda) VALUES (?, ?, ?, ?, ?, ?, ?, ? , ?, ?, ?, ?, ?);',
+      'INSERT INTO leads (nome, telefone1, telefone1WhatsApp, email, veiculoInteresse,  vendedor, comoconheceu, horaEntrada, observacao, dealer, origem, createdBy, departamento, tipoVenda) VALUES (?, ?, ?, ?, ?, ?, ?, ? , ?, ?, ?, ?, ?);',
       [
         nome,
         telefone1.replace(/\D/g, ''),
+        await consultarWhatsApp(telefone1.replace(/\D/g, '')),
         email,
         veiculoInteresse,
         vendedor === ''
@@ -295,19 +296,21 @@ exports.atualizar = async (req, res) => {
 
     const connection = await mysql.createConnection(dbConfig);
     await connection.query(
-      `UPDATE leads SET nome = ?, departamento = ?, cpf = ?, dataNascimento = ?, telefone1 = NULLIF(?, ''), telefone2 = NULLIF(?, ''), email = ?, veiculoInteresse = ?, vendedor = ?, observacao = ?, comoconheceu = ?, tipoVenda = ? WHERE id = ? and dealer = ?;`,
+      `UPDATE leads SET nome = ?, departamento = ?, cpf = ?, dataNascimento = ?, telefone1 = NULLIF(?, ''), telefone1WhatsApp = ?, telefone2 = NULLIF(?, ''), telefone2WhatsApp = ?, email = ?, veiculoInteresse = ?, vendedor = ?, observacao = ?, comoconheceu = ?, tipoVenda = ? WHERE id = ? and dealer = ?;`,
       [
         nome,
         departamento,
         cpf,
         dataNascimento1,
         telefone1.replace(/\D/g, ''),
+        await consultarWhatsApp(telefone1.replace(/\D/g, '')),
         telefone2.replace(/\D/g, ''),
+        await consultarWhatsApp(telefone2.replace(/\D/g, '')),
         email,
         veiculoInteresse,
         vendedor === ''
-        ? await vendedorDaVez('interno', tipoVenda === '' ? departamento : tipoVenda, dealer)
-        : vendedor,
+          ? await vendedorDaVez('interno', tipoVenda === '' ? departamento : tipoVenda, dealer)
+          : vendedor,
         observacao,
         comoconheceu,
         tipoVenda,
@@ -601,7 +604,15 @@ exports.alterarStatus = async (req, res) => {
     const connection = await mysql.createConnection(dbConfig);
     await connection.query(
       `UPDATE leads SET statusNegociacao = ?, agendamentoContato = DateTimeFormatPtBrToMysql(?), numeroPedido = NULLIF(?, ""), motivoDesistencia = NULLIF(?, ""), dataVisita = DateTimeFormatPtBrToMysql(?) ${SQLFinalizadoEm} WHERE id = ? and dealer = ?;`,
-      [status, (dataVisita === '') ? agendamentoContato : dataVisita, numeroPedido, motivoDesistencia, dataVisita, lead, dealer]
+      [
+        status,
+        dataVisita === '' ? agendamentoContato : dataVisita,
+        numeroPedido,
+        motivoDesistencia,
+        dataVisita,
+        lead,
+        dealer,
+      ]
     );
     await connection.end();
 
@@ -824,7 +835,6 @@ exports.outrosLeads = async (req, res) => {
     });
   }
 };
-
 
 exports.avaliacaousado_alterar = async (req, res) => {
   try {

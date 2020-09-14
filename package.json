@@ -36,7 +36,8 @@
     "nodemailer": "^6.4.10",
     "nodemailer-express-handlebars": "^4.0.0",
     "uuid": "^8.3.0",
-    "validator": "^13.1.1"
+    "validator": "^13.1.1",
+    "venom-bot": "^1.1.4"
   },
   "devDependencies": {
     "eslint": "^7.5.0",
